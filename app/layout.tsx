@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { JetBrains_Mono, Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import HomeLink from "@/components/home-link";
@@ -7,6 +8,7 @@ import { NavigationEvents } from "@/components/navigation-events";
 import NProgress from "nprogress";
 import "./globals.css";
 import "nprogress/nprogress.css";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 NProgress.configure({
   showSpinner: false,
@@ -55,7 +57,9 @@ export default function RootLayout({
         className="deck-grid deck-vignette min-h-screen font-mono"
         suppressHydrationWarning
       >
-        <NavigationEvents />
+        <Suspense fallback={null}>
+          <NavigationEvents />
+        </Suspense>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"
