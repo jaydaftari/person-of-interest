@@ -112,7 +112,7 @@ export function CameraModal({
               <Battery className="h-4 w-4 text-green-400" />
             </div>
             {incident && (
-              <div className="flex items-center gap-2 rounded-full bg-red-500/20 px-3 py-1 text-sm text-red-500 backdrop-blur-sm">
+              <div className="flex items-center gap-2 rounded-full bg-deck-alert/20 px-3 py-1 text-sm text-deck-alert backdrop-blur-sm">
                 <AlertTriangle className="h-4 w-4" />
                 <span>{incident}</span>
               </div>

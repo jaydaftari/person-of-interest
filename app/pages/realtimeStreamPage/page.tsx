@@ -357,7 +357,7 @@ export default function Page() {
               // Draw keypoint
               ctx.beginPath()
               ctx.arc(x, y, 4, 0, 2 * Math.PI)
-              ctx.fillStyle = "rgba(255, 0, 0, 0.8)"
+              ctx.fillStyle = "rgba(108, 138, 78, 0.9)"
               ctx.fill()
 
               // Outer circle
@@ -785,7 +785,7 @@ export default function Page() {
               </div>
 
               {error && !isInitializing && (
-                <div className="p-4 bg-red-900/50 border border-red-500 rounded-lg text-red-200">
+                <div className="p-4 bg-deck-alert/20 border border-deck-alert rounded-lg text-deck-alert">
                   {error}
                 </div>
               )}
@@ -810,7 +810,7 @@ export default function Page() {
                 ) : (
                   <button
                     onClick={stopRecording}
-                    className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+                    className="flex items-center gap-2 px-4 py-2 bg-deck-alert hover:bg-deck-alert/80 text-deck-bg rounded-lg transition-colors"
                   >
                     <StopCircle className="w-5 h-5" />
                     Stop Analysis
@@ -821,7 +821,7 @@ export default function Page() {
               {isRecording && (
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full bg-red-500 animate-pulse" />
+                    <div className="w-3 h-3 rounded-full bg-deck-alert animate-pulse" />
                     <span className="text-sm text-zinc-400">
                       Recording and analyzing...
                     </span>

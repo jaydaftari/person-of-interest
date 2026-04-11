@@ -29,14 +29,16 @@ interface VisibleEvent extends Event {
   addedAt: number
 }
 
+// All incident types use the same deck palette — tactical amber signal for
+// the marker and the dull olive alert for actionable threats. No rainbow.
 const INCIDENT_TYPES = {
-  theft: { icon: HandMetal, color: "text-yellow-500", bg: "bg-yellow-500/10" },
-  robbery: { icon: Siren, color: "text-red-500", bg: "bg-red-500/10" },
-  shoplifting: { icon: Store, color: "text-blue-500", bg: "bg-blue-500/10" },
-  assault: { icon: Sword, color: "text-orange-500", bg: "bg-orange-500/10" },
-  battery: { icon: Sword, color: "text-orange-500", bg: "bg-orange-500/10" },
-  vandalism: { icon: Bomb, color: "text-purple-500", bg: "bg-purple-500/10" },
-  disorderly: { icon: ShieldAlert, color: "text-indigo-500", bg: "bg-indigo-500/10" },
+  theft:       { icon: HandMetal,  color: "text-deck-signal", bg: "bg-deck-signal/10" },
+  robbery:     { icon: Siren,      color: "text-deck-alert",  bg: "bg-deck-alert/10"  },
+  shoplifting: { icon: Store,      color: "text-deck-signal", bg: "bg-deck-signal/10" },
+  assault:     { icon: Sword,      color: "text-deck-alert",  bg: "bg-deck-alert/10"  },
+  battery:     { icon: Sword,      color: "text-deck-alert",  bg: "bg-deck-alert/10"  },
+  vandalism:   { icon: Bomb,       color: "text-deck-signal", bg: "bg-deck-signal/10" },
+  disorderly:  { icon: ShieldAlert,color: "text-deck-alert",  bg: "bg-deck-alert/10"  },
 } as const
 
 const getIncidentIcon = (type: string) => {
@@ -46,7 +48,7 @@ const getIncidentIcon = (type: string) => {
       return value
     }
   }
-  return { icon: AlertTriangle, color: "text-gray-500", bg: "bg-gray-500/10" }
+  return { icon: AlertTriangle, color: "text-deck-dim", bg: "bg-deck-line/30" }
 }
 
 const formatTimeAgo = (addedAt: number, currentTime: number) => {
@@ -159,10 +161,10 @@ export function EventFeed({ events, videoTimes, onEventHover, onEventClick }: Ev
                     }}
                     className={cn(
                       "relative z-20 flex flex-1 items-center justify-center gap-2 rounded-md px-3 py-2 text-sm font-medium",
-                      "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
-                      "hover:bg-red-200 hover:text-red-700 dark:hover:bg-red-900/50 dark:hover:text-red-300",
+                      "bg-deck-alert/20 text-deck-alert",
+                      "hover:bg-deck-alert/30 hover:text-deck-fg",
                       "transform transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]",
-                      "focus:outline-none focus:ring-2 focus:ring-red-400 focus:ring-offset-2 dark:focus:ring-red-800"
+                      "focus:outline-none focus:ring-2 focus:ring-deck-alert focus:ring-offset-2 focus:ring-offset-deck-bg"
                     )}
                   >
                     <Shield className="h-4 w-4" />

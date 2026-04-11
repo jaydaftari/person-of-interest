@@ -55,7 +55,7 @@ export function Timeline({ events, totalDuration, currentTime = 0 }: TimelinePro
                   key={index}
                   className={cn(
                     "absolute h-2 rounded-full cursor-pointer",
-                    event.type === 'warning' ? 'bg-red-500 hover:bg-red-400' : 'bg-blue-500 hover:bg-blue-400'
+                    event.type === 'warning' ? 'bg-deck-alert hover:bg-deck-alert/80' : 'bg-blue-500 hover:bg-blue-400'
                   )}
                   style={{
                     left: `${startPercentage}%`,
@@ -111,7 +111,7 @@ export function Timeline({ events, totalDuration, currentTime = 0 }: TimelinePro
             </span>
             <span className={cn(
               "px-2 py-0.5 rounded",
-              hoveredEvent.event.type === 'warning' ? 'bg-red-500/20 text-red-200' : 'bg-blue-500/20 text-blue-200'
+              hoveredEvent.event.type === 'warning' ? 'bg-deck-alert/20 text-deck-alert' : 'bg-blue-500/20 text-blue-200'
             )}>
               {hoveredEvent.event.type === 'warning' ? 'Warning' : 'Normal'}
             </span>

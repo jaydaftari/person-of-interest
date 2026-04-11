@@ -69,7 +69,7 @@ export default function TimestampList({ timestamps, onTimestampClick }: Timestam
             <span className="text-zinc-400">Safe</span>
           </div>
           <div className="flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 text-red-400" />
+            <ShieldAlert className="h-4 w-4 text-deck-alert" />
             <span className="text-zinc-400">Dangerous</span>
           </div>
         </div>
@@ -80,19 +80,19 @@ export default function TimestampList({ timestamps, onTimestampClick }: Timestam
             key={index}
             variant="outline"
             className={`group w-full justify-start gap-2 h-auto py-4 transition-all duration-200 ${
-              item.isDangerous 
-                ? 'bg-red-950/20 border-red-900/50 hover:bg-red-950/30 hover:border-red-700/70' 
+              item.isDangerous
+                ? 'bg-deck-alert/10 border-deck-alert/50 hover:bg-deck-alert/20 hover:border-deck-alert/70'
                 : 'bg-zinc-800/50 border-zinc-700/50 hover:bg-zinc-800 hover:border-zinc-600'
             } text-left relative overflow-hidden`}
             onClick={() => onTimestampClick(item.timestamp)}
           >
             <div className={`absolute left-0 top-0 bottom-0 w-1 transition-all duration-200 ${
               item.isDangerous
-                ? 'bg-red-500 group-hover:bg-red-400'
+                ? 'bg-deck-alert group-hover:bg-deck-alert/80'
                 : 'bg-green-500 group-hover:bg-green-400'
             }`} />
             {item.isDangerous ? (
-              <ShieldAlert className="h-4 w-4 shrink-0 text-red-400" />
+              <ShieldAlert className="h-4 w-4 shrink-0 text-deck-alert" />
             ) : (
               <Shield className="h-4 w-4 shrink-0 text-green-400" />
             )}
@@ -100,7 +100,7 @@ export default function TimestampList({ timestamps, onTimestampClick }: Timestam
               <div className="flex items-center gap-2 flex-wrap w-full">
                 <span className="font-mono text-white shrink-0">{item.timestamp}</span>
                 {item.isDangerous && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 shrink-0">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-deck-alert/20 text-deck-alert border border-deck-alert/30 shrink-0">
                     Dangerous
                   </span>
                 )}
@@ -113,7 +113,7 @@ export default function TimestampList({ timestamps, onTimestampClick }: Timestam
                   <p 
                     ref={(el) => { textRefs.current[index] = el }}
                     className={`whitespace-pre-wrap break-words ${expandedItems.includes(index) ? '' : 'line-clamp-1'} ${
-                    item.isDangerous ? 'text-red-200/80' : 'text-zinc-400'
+                    item.isDangerous ? 'text-deck-alert/80' : 'text-zinc-400'
                   }`}>
                     {item.description}
                   </p>
@@ -123,7 +123,7 @@ export default function TimestampList({ timestamps, onTimestampClick }: Timestam
                       tabIndex={0}
                       onClick={(e: React.MouseEvent) => toggleExpand(index, e)}
                       onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && toggleExpand(index, e)}
-                      className={`flex items-center gap-1 text-xs mt-1 cursor-pointer ${item.isDangerous ? 'text-red-400 hover:text-red-300' : 'text-zinc-500 hover:text-zinc-300'} transition-colors`}
+                      className={`flex items-center gap-1 text-xs mt-1 cursor-pointer ${item.isDangerous ? 'text-deck-alert hover:text-deck-alert/80' : 'text-zinc-500 hover:text-zinc-300'} transition-colors`}
                     >
                       {expandedItems.includes(index) ? (
                         <>

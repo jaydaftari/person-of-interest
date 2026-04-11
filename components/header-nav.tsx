@@ -5,10 +5,11 @@ import { usePathname } from "next/navigation";
 
 const ITEMS = [
   { href: "/pages/nyctmc", label: "NYC DECK", code: "01" },
-  { href: "/pages/realtimeStreamPage", label: "REALTIME", code: "02" },
-  { href: "/pages/upload", label: "UPLOAD", code: "03" },
-  { href: "/pages/saved-videos", label: "LIBRARY", code: "04" },
-  { href: "/pages/statistics", label: "STATS", code: "05" },
+  { href: "/pages/map", label: "MAP", code: "02" },
+  { href: "/pages/realtimeStreamPage", label: "REALTIME", code: "03" },
+  { href: "/pages/upload", label: "UPLOAD", code: "04" },
+  { href: "/pages/saved-videos", label: "LIBRARY", code: "05" },
+  { href: "/pages/statistics", label: "STATS", code: "06" },
 ];
 
 export function HeaderNav() {
