@@ -77,6 +77,7 @@ export default function Page() {
   const recordedChunksRef = useRef<Blob[]>([])
   const isRecordingRef = useRef<boolean>(false)
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const previewFrameRef = useRef<number | null>(null)
 
   // -----------------------------
   // 1) Initialize ML Models
@@ -151,10 +152,43 @@ export default function Page() {
     canvas.height = 360 // fixed height (16:9)
   }
 
+  const stopPreviewLoop = () => {
+    if (previewFrameRef.current) {
+      cancelAnimationFrame(previewFrameRef.current)
+      previewFrameRef.current = null
+    }
+  }
+
+  const startPreviewLoop = () => {
+    stopPreviewLoop()
+
+    const drawPreview = () => {
+      if (!isRecordingRef.current) {
+        const video = videoRef.current
+        const canvas = canvasRef.current
+        if (video && canvas && video.videoWidth > 0 && video.videoHeight > 0) {
+          const ctx = canvas.getContext("2d")
+          if (ctx) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height)
+            drawVideoToCanvas(video, canvas, ctx)
+          }
+        }
+      }
+      previewFrameRef.current = requestAnimationFrame(drawPreview)
+    }
+
+    previewFrameRef.current = requestAnimationFrame(drawPreview)
+  }
+
   // -----------------------------
   // 2) Set up the webcam
   // -----------------------------
   const startWebcam = async () => {
+    if (typeof window === "undefined" || typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) {
+      setError("Webcam capture isn't supported in this environment. Try a secure browser tab with camera access enabled.")
+      return
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -173,6 +207,8 @@ export default function Page() {
         await new Promise<void>((resolve) => {
           videoRef.current!.onloadedmetadata = () => {
             updateCanvasSize()
+            videoRef.current?.play().catch(() => undefined)
+            startPreviewLoop()
             resolve()
           }
         })
@@ -186,6 +222,7 @@ export default function Page() {
   }
 
   const stopWebcam = () => {
+    stopPreviewLoop()
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop())
       mediaStreamRef.current = null
@@ -352,11 +389,11 @@ export default function Page() {
   }
 
   // Helper: Draw video to canvas (maintaining aspect ratio)
-  const drawVideoToCanvas = (
+  function drawVideoToCanvas(
     video: HTMLVideoElement,
     canvas: HTMLCanvasElement,
     ctx: CanvasRenderingContext2D
-  ) => {
+  ) {
     const videoAspect = video.videoWidth / video.videoHeight
     const canvasAspect = canvas.width / canvas.height
 
@@ -520,6 +557,7 @@ export default function Page() {
     startTimeRef.current = new Date()
     isRecordingRef.current = true
     setIsRecording(true)
+    stopPreviewLoop()
     // Start tracking video duration
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current)
@@ -617,6 +655,10 @@ export default function Page() {
     if (durationIntervalRef.current) {
       clearInterval(durationIntervalRef.current)
       durationIntervalRef.current = null
+    }
+
+    if (mediaStreamRef.current) {
+      startPreviewLoop()
     }
   }
 
