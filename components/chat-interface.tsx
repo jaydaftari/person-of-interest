@@ -80,7 +80,7 @@ export default function ChatInterface({ timestamps, className = '' }: ChatInterf
   return (
     <div className={`fixed bottom-4 right-4 w-96 h-[500px] bg-zinc-900/95 backdrop-blur-sm rounded-lg shadow-xl border border-zinc-800 flex flex-col z-50 ${className}`}>
       <div className="flex items-center justify-between p-4 border-b border-zinc-800 bg-zinc-900">
-        <h3 className="font-semibold text-white">Hawk Assistance</h3>
+        <h3 className="font-semibold text-white">Assistant</h3>
         <Button
           variant="ghost"
           size="icon"

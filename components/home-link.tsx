@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-// Wordmark with tactical register. Acts as the home link for the app shell.
+// DECK/01 wordmark. Primary home link for the app shell.
 export default function HomeLink() {
   return (
     <Link

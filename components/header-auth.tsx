@@ -1,5 +1,4 @@
-// Auth stripped in the local demo build. Renders a tactical "operator"
-// badge in place of the old sign-in / sign-out controls.
+// Renders the operator badge in the top-right of the app shell.
 export default function AuthButton() {
   return (
     <div className="flex items-center gap-3">

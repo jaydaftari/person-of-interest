@@ -8,7 +8,6 @@ import { StatsOverview } from "@/components/stats-overview";
 import { locations, events } from "@/lib/data";
 
 // DECK/01 dashboard — tactical grid view of all registered cameras.
-// No auth gate in the local demo build.
 export default function ProtectedPage() {
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null);
   const [videoTimes, setVideoTimes] = useState<Record<string, number>>({});

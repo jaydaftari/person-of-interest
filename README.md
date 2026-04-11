@@ -1,68 +1,147 @@
-# Person of Interest - AI-Powered Security Surveillance
+# Person of Interest — DECK/01
 
-![Gif 1](public/gifs/landing.gif)
-![Gif 2](public/gifs/gallary.gif)
-## Inspiration
-In an era where security cameras are everywhere but meaningful surveillance is scarce, we saw an opportunity to transform passive recording systems into intelligent security guardians. Our inspiration came from real-world incidents where crucial moments were missed despite having camera coverage, and the overwhelming challenge security personnel face in monitoring multiple video feeds simultaneously. We wanted to create a solution that doesn't just record but understands, analyzes, and acts, whether it's for local businesses like grocery markets to bigger organizations like hospitals and shopping malls.
+A local-inference tactical HUD for live NYC infrastructure.
+
+DECK/01 watches the public NYC Traffic Management Center camera catalog
+(hundreds of feeds) and runs every frame through a **local** Gemma 4
+vision-language model served by LM Studio. Nothing leaves the machine.
+No API bills. No rate limits. No external inference hops.
 
 ## What it does
-Person of Interest is an intelligent video surveillance platform that detects crime, suspicious activities and life threatening events such as fainting and choking and sends phone alerts to alert security of the issue. Our intelligent model generates time-stamped incident reports with video evidence. It has 3 main features:
-1. Real-time analysis of video streams using Google's Gemini Visual Language Model
-2. An upload feature that uploads an existing mp4 file for crime analysis
-3. A library of saved livestream footage and mp4 uploads, with detailed security analysis complete with timeline and information which is saved with each entry
 
-### Additional features
-* Sends instant alerts to security through email/phone notifications
-* Provides an intuitive dashboard for monitoring multiple cameras
-* Offers an OpenAI powered assistant that provides contextual support. The bot is fed real-time information about the ongoing event and can respond to user queries, such as "What should I do in this situation" if someone has passed out, helping with quick context-aware advice
-* Offers both real-time streaming and uploaded video analysis
-* Statistics page which offers an AI summary, chart analysis, and the option to export to CSV.
+- **Map tab** — every NYC TMC camera with known coordinates rendered as
+  a tactical marker over a dark basemap. Click any marker to pull the
+  live still and run on-device inference.
+- **NYC deck tab** — sortable catalog with operator notes, inline
+  analysis, and a structured detection stream.
+- **Realtime tab** — browser webcam or uploaded MP4 → local Gemma 4
+  frame detection with pose keypoints, event timeline, and a chat
+  assistant fed the detection stream.
+- **Grid dashboard** — tactical overview of every registered camera
+  with an event log sidebar.
+- **Statistics tab** — charts over historical key-moment data, plus an
+  LLM summary of notable patterns.
 
-## How we built it
-Our tech stack combines modern tools for a robust, scalable solution:
-* **Frontend**: The UI is built with Next.js 13+ and TypeScript, paired with Tailwind CSS for a sleek, responsive design. This ensures a seamless experience for users across different devices.
-* **Backend**: We use Supabase for secure user authentication and database management, allowing for easy access control and efficient data handling.
-* **AI Processing**: Person of Interest uses a locally hosted **Gemma 4** Visual Language Model served via **LM Studio** (OpenAI-compatible endpoint at `http://localhost:1234/v1`) for real-time video analysis, plus TensorFlow.js for processing video streams on the client side. Running the VLM locally removes per-frame API costs and rate limits, and keeps surveillance footage on-device.
-* **Email/Phone Service**: Resend API powers our email and phone notification system, ensuring that alerts are sent in real-time with minimal delays.
-* **Real-time Updates**: We leverage the Canvas API for live updates, ensuring that Person of Interest’s real-time analysis is fast and accurate, even as it processes multiple video streams.
-* **Contextual Assistance**: OpenAI’s language models are integrated to power our assistant bot, which helps security teams with situational guidance. The bot uses context from the most recent events to offer real-time advice, improving the decision-making process during critical moments.
+## Stack
 
-## Challenges we ran into
-1. **Performance Optimization**: Balancing real-time video processing with browser performance and Gemini rate limits
-2. **AI Model Accuracy**: Fine-tuning detection algorithms to minimize false positives
-3. **Video Stream Handling**: Managing multiple video streams without overwhelming the system
+- **Next.js 15 / App Router** · React 19 · TypeScript · Tailwind CSS
+- **LM Studio** running `google/gemma-4-26b-a4b` (or any vision-capable
+  model) via an OpenAI-compatible endpoint at `http://localhost:1234/v1`
+- **JSON Schema** structured output for deterministic detections and
+  zero reasoning-token overhead on Gemma 4
+- **Leaflet + react-leaflet** with Carto Dark Matter tiles for the map
+- **Chart.js** for the statistics page
+- **Resend** for alert emails (optional)
 
-## Accomplishments that we're proud of
-* Created a fully functional AI surveillance system in 36 hours
-* Achieved real-time processing with minimal latency
-* Implemented a beautiful, intuitive user interface
-* Built a scalable architecture that can handle multiple cameras
-* Developed a system that's accessible through any modern browser
+## Architecture
 
-## What we learned
-* Advanced video processing techniques in the browser
-* Real-time data handling with WebSocket connections to handle real-time updates effectively
-* AI model optimization for edge cases
-* Complex state management in React applications, especially when dealing with large datasets
-* Integration of multiple third-party services
-* The importance of user experience in security applications
+```
+┌─────────────────┐   ┌────────────────────┐   ┌──────────────────┐
+│  webcams.nyctmc │──►│ /api/nyctmc/*      │──►│  lib/lmstudio.ts │
+│  .org/api       │   │  cameras | analyze │   │  (Gemma 4 VLM)   │
+│  ~900 feeds     │   └────────────────────┘   └──────────────────┘
+└─────────────────┘                                      ▲
+                                                         │
+       ┌─────────────────────────────────────────────────┘
+       │
+┌──────┴───────────────────────────────────────────────────┐
+│               Next.js App Router UI                       │
+│   /pages/map   /pages/nyctmc   /pages/realtimeStreamPage  │
+│   /protected   /pages/statistics   /pages/upload          │
+└───────────────────────────────────────────────────────────┘
+```
 
-## What's next for Person of Interest
-Future enhancements we're planning:
+## Running it
 
-### 1. Advanced AI Features
-* Person identification and recognition
-* Object tracking across multiple cameras
-* Behavioral pattern analysis
+**Prereqs**
 
-### 2. Enhanced Security
-* End-to-end encryption
-* GDPR compliance tools
-* Advanced access control
+1. Node 18+ and `npm`
+2. [LM Studio](https://lmstudio.ai) with a vision-capable Gemma 4 model
+   loaded and the developer server started (default: `http://localhost:1234`)
 
-### 3. Smart Home Integration
-* Integration with popular smart home platforms
-* Automated response actions
-* Voice assistant compatibility
+**Setup**
 
-Our vision is to make Person of Interest the go-to platform for intelligent video surveillance, making security monitoring more efficient and effective for everyone.
+```bash
+npm install
+cp .env.example .env.local     # adjust LMSTUDIO_MODEL if needed
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+## Environment variables
+
+| Variable | Required | Default | Purpose |
+|---|---|---|---|
+| `LMSTUDIO_BASE_URL` | no | `http://localhost:1234/v1` | Local LM Studio OpenAI-compatible endpoint |
+| `LMSTUDIO_MODEL` | no | `google/gemma-4-26b-a4b` | Must match an `id` returned by `GET /v1/models` |
+| `LMSTUDIO_API_KEY` | no | `lm-studio` | LM Studio ignores this; any non-empty string works |
+| `OPENAI_API_KEY` | no | — | Only used by the optional chat assistant (`/api/chat`) and summary (`/api/summary`) routes |
+| `RESEND_API_KEY` | no | — | Required only if you want email alerts |
+| `ALERT_EMAIL_TO` | no | — | Comma-separated recipient list for alert emails |
+| `ALERT_EMAIL_FROM` | no | `DECK/01 <onboarding@resend.dev>` | Alert email `from` header |
+
+## Layout
+
+```
+app/
+  layout.tsx                       # app shell, status strip, nav, footer
+  page.tsx                         # landing (boot screen + CTAs)
+  globals.css                      # DECK/01 design tokens + utilities
+  protected/page.tsx               # tactical camera grid dashboard
+  pages/
+    map/page.tsx                   # Leaflet-based NYC camera map
+    nyctmc/page.tsx                # NYC TMC catalog + analysis
+    realtimeStreamPage/page.tsx    # live browser capture + inference
+    upload/page.tsx                # MP4 upload + inference
+    saved-videos/page.tsx          # saved library
+    statistics/page.tsx            # charts + LLM summary
+    video/[id]/page.tsx            # single-video deep dive
+  api/
+    nyctmc/cameras/route.ts        # proxy to NYC TMC camera catalog
+    nyctmc/analyze/route.ts        # frame → local VLM
+    chat/route.ts                  # assistant chat (OpenAI, optional)
+    summary/route.ts               # stats summary (OpenAI, optional)
+    send-email/route.ts            # Resend alerts (optional)
+lib/
+  lmstudio.ts                      # shared LM Studio client + frame schema
+  nyctmc.ts                        # NYC TMC fetch + normalization
+  data.ts                          # demo camera + event mock data
+components/
+  nyc-map.tsx                      # Leaflet wrapper (dynamic-imported)
+  camera-feed.tsx                  # looping video tile for the dashboard
+  camera-modal.tsx                 # full-screen camera viewer
+  event-feed.tsx                   # recent-incident sidebar
+  timestamp-list.tsx               # keymoment list
+  chat-interface.tsx               # assistant chat widget
+  stats-overview.tsx               # dashboard metric tiles
+  header-nav.tsx                   # primary nav with numbered codes
+  header-auth.tsx                  # operator badge
+  home-link.tsx                    # DECK/01 wordmark
+```
+
+## Design
+
+The UI is a terminal-brutalist tactical HUD:
+
+- **Monospace** (JetBrains Mono) for everything except long prose
+- **Hard rectangles** with amber corner brackets — zero border-radius
+- **Monochrome + one signal color** — near-black base, off-white
+  foreground, tactical amber `#ffb81c` for active state, dull military
+  olive `#6c8a4e` for alerts, mint green for OK status
+- **Subtle scan lines** on video containers
+- **Tabular numerals** and ASCII markers (`▲`, `■`, `//`, `[01/200]`)
+  everywhere data lives
+- **Dark Leaflet tiles** (Carto Dark Matter) so the map blends into the
+  page chrome
+
+## Notes
+
+- All inference runs locally. No frames are uploaded anywhere.
+- The optional `/api/chat` and `/api/summary` routes still call the
+  OpenAI API for the conversational assistant and the stats summary —
+  you can swap them to hit `lib/lmstudio.ts` instead if you prefer
+  zero cloud dependencies.
+- Geographic coordinates on the NYC TMC feed are inconsistent upstream;
+  the map page shows a `LOCATABLE / TOTAL` counter so you can see the
+  split at a glance.
