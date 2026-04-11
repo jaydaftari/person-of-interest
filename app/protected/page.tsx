@@ -1,34 +1,18 @@
 "use client"
 
 import { useState } from "react"
-import { createClient } from "@/utils/supabase/client"
-import { redirect } from "next/navigation"
 import { CameraFeed } from "@/components/camera-feed"
 import { CameraModal } from "@/components/camera-modal"
 import { EventFeed } from "@/components/event-feed"
 import { StatsOverview } from "@/components/stats-overview"
 import { locations, events } from "@/lib/data"
 
+// Auth stripped: this page used to gate behind Supabase.auth.getUser().
+// In the local demo build it's freely accessible as the main dashboard.
 export default function ProtectedPage() {
-  const supabase = createClient()
   const [selectedCamera, setSelectedCamera] = useState<string | null>(null)
   const [videoTimes, setVideoTimes] = useState<Record<string, number>>({})
   const [hoveredCamera, setHoveredCamera] = useState<string | null>(null)
-
-  const handleAuth = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser()
-
-    if (!user) {
-      return redirect("/sign-in")
-    }
-  }
-
-  // Check auth on mount
-  useState(() => {
-    handleAuth()
-  })
 
   const handleTimeUpdate = (cameraId: string, time: number) => {
     setVideoTimes(prev => ({
