@@ -1,17 +1,13 @@
-import { Badge } from "./ui/badge";
-
-/**
- * Auth has been stripped from this demo build. The original sign-in /
- * sign-out UI has been replaced with a static "Local demo" badge so the
- * layout still renders something in the header-auth slot without touching
- * Supabase. Re-add the original component to restore full auth.
- */
+// Auth stripped in the local demo build. Renders a tactical "operator"
+// badge in place of the old sign-in / sign-out controls.
 export default function AuthButton() {
   return (
-    <div className="flex items-center gap-2">
-      <Badge variant="outline" className="font-normal pointer-events-none">
-        Local demo · auth disabled
-      </Badge>
+    <div className="flex items-center gap-3">
+      <span className="flex items-center gap-2 border border-deck-line px-3 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-deck-dim">
+        <span className="deck-dot text-deck-ok" />
+        OPERATOR · LOCAL
+      </span>
+      <span className="deck-num text-[11px] font-bold text-deck-faint">K-482</span>
     </div>
   );
 }

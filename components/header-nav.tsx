@@ -1,34 +1,41 @@
-import Link from "next/link"
-import { Video, PlaySquare, FolderOpen, BarChart2 } from "lucide-react"
-import { Button } from "./ui/button"
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+const ITEMS = [
+  { href: "/pages/nyctmc", label: "NYC DECK", code: "01" },
+  { href: "/pages/realtimeStreamPage", label: "REALTIME", code: "02" },
+  { href: "/pages/upload", label: "UPLOAD", code: "03" },
+  { href: "/pages/saved-videos", label: "LIBRARY", code: "04" },
+  { href: "/pages/statistics", label: "STATS", code: "05" },
+];
 
 export function HeaderNav() {
+  const pathname = usePathname();
+
   return (
-    <div className="flex items-center gap-2">
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/pages/upload" className="flex items-center gap-2">
-          <Video className="h-4 w-4" />
-          <span>Upload</span>
-        </Link>
-      </Button>
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/pages/realtimeStreamPage" className="flex items-center gap-2">
-          <PlaySquare className="h-4 w-4" />
-          <span>Realtime</span>
-        </Link>
-      </Button>
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/pages/saved-videos" className="flex items-center gap-2">
-          <FolderOpen className="h-4 w-4" />
-          <span>Library</span>
-        </Link>
-      </Button>
-      <Button asChild variant="ghost" size="sm">
-        <Link href="/pages/statistics" className="flex items-center gap-2">
-          <BarChart2 className="h-4 w-4" />
-          <span>Statistics</span>
-        </Link>
-      </Button>
-    </div>
-  )
+    <nav className="flex items-center gap-1">
+      {ITEMS.map((item) => {
+        const active = pathname?.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={`group flex items-center gap-2 px-3 py-2 text-[11px] font-bold uppercase tracking-[0.14em] transition-colors ${
+              active
+                ? "text-deck-signal"
+                : "text-deck-dim hover:text-deck-fg"
+            }`}
+          >
+            <span className="deck-num text-[10px] font-bold text-deck-faint group-hover:text-deck-dim">
+              {item.code}
+            </span>
+            <span>{item.label}</span>
+            {active && <span className="deck-dot h-1.5 w-1.5 text-deck-signal" />}
+          </Link>
+        );
+      })}
+    </nav>
+  );
 }
