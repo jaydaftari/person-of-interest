@@ -64,7 +64,7 @@ async def list_hex_cells(
 @router.get("/heatmap", response_model=Heatmap)
 async def get_heatmap(
     resolution: int = Query(default=None),
-    top: int = Query(default=600, ge=1, le=50000),
+    top: int = Query(default=50_000, ge=1, le=50_000),
     category: str = Query(default="all"),
     hour_of_week: int | None = Query(
         default=None,

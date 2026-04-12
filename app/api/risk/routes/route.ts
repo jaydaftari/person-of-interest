@@ -1,19 +1,17 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 const POI_BRAIN_URL = process.env.POI_BRAIN_URL ?? "http://localhost:8080";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: NextRequest) {
-  const category = req.nextUrl.searchParams.get("category");
-  const qs = category ? `?category=${encodeURIComponent(category)}` : "";
+export async function GET() {
   try {
-    const res = await fetch(`${POI_BRAIN_URL}/stats/forecast${qs}`, {
+    const res = await fetch(`${POI_BRAIN_URL}/routes/current`, {
       cache: "no-store",
     });
     if (!res.ok) {
       return NextResponse.json(
-        { error: `poi-brain ${res.status}`, detail: await res.text() },
+        { error: `poi-brain ${res.status}` },
         { status: res.status }
       );
     }

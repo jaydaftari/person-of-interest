@@ -8,16 +8,32 @@ import type {
   RiskScore,
 } from "@/types";
 
-const POI_BRAIN_URL =
-  process.env.NEXT_PUBLIC_POI_BRAIN_URL ?? "http://localhost:8080";
+/**
+ * Browser-side risk client.
+ *
+ * All requests go through the Next.js `/api/risk/*` proxy routes (which in
+ * turn talk to poi-brain server-side). This keeps CORS out of the picture
+ * for the judging-room browser path — the only thing the browser needs to
+ * reach is Next.js itself, and the proxy handles the hop to the DGX.
+ *
+ * Server-side code (e.g. a server action that wanted to call poi-brain
+ * directly) should use POI_BRAIN_URL via getJsonDirect() below.
+ */
+
+const PROXY_BASE = "/api/risk";
+
+const DIRECT_BASE =
+  typeof process !== "undefined"
+    ? process.env.POI_BRAIN_URL ?? "http://localhost:8080"
+    : "http://localhost:8080";
 
 async function getJson<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${POI_BRAIN_URL}${path}`, {
+  const res = await fetch(`${PROXY_BASE}${path}`, {
     cache: "no-store",
     ...init,
   });
   if (!res.ok) {
-    throw new Error(`poi-brain ${path} ${res.status}: ${await res.text()}`);
+    throw new Error(`poi-brain proxy ${path} ${res.status}: ${await res.text()}`);
   }
   return (await res.json()) as T;
 }
@@ -38,11 +54,11 @@ export async function fetchHeatmap(
   if (hourOfWeek !== undefined) {
     params.set("hour_of_week", String(hourOfWeek));
   }
-  return getJson<Heatmap>(`/risk/heatmap?${params.toString()}`);
+  return getJson<Heatmap>(`/heatmap?${params.toString()}`);
 }
 
 export async function fetchCategories(): Promise<HazardCategory[]> {
-  return getJson<HazardCategory[]>("/risk/categories");
+  return getJson<HazardCategory[]>("/categories");
 }
 
 export async function fetchCameraRisk(
@@ -50,7 +66,7 @@ export async function fetchCameraRisk(
 ): Promise<RiskScore | null> {
   try {
     return await getJson<RiskScore>(
-      `/risk/camera/${encodeURIComponent(cameraId)}`
+      `/camera/${encodeURIComponent(cameraId)}`
     );
   } catch {
     return null;
@@ -60,19 +76,28 @@ export async function fetchCameraRisk(
 export async function fetchForecastStats(
   category: HazardCategoryId = "all"
 ): Promise<ForecastStats> {
-  return getJson<ForecastStats>(`/stats/forecast?category=${category}`);
+  return getJson<ForecastStats>(`/stats?category=${category}`);
 }
 
 export async function fetchPatrolRoutes(): Promise<PatrolRoute[]> {
-  return getJson<PatrolRoute[]>("/routes/current");
+  return getJson<PatrolRoute[]>("/routes");
 }
+
+/**
+ * SSE subscriptions bypass the proxy — EventSource can't be easily forwarded
+ * through a Next.js route handler. These talk directly to poi-brain using
+ * the NEXT_PUBLIC_POI_BRAIN_URL env var. Dev-time only; for the DGX demo set
+ * NEXT_PUBLIC_POI_BRAIN_URL to the reachable DGX address.
+ */
+const SSE_BASE =
+  process.env.NEXT_PUBLIC_POI_BRAIN_URL ?? "http://localhost:8080";
 
 export function openRiskStream(
   onMessage: (risk: RiskScore) => void,
   onError?: (ev: Event) => void
 ): EventSource | null {
   if (typeof window === "undefined") return null;
-  const es = new EventSource(`${POI_BRAIN_URL}/risk/stream`);
+  const es = new EventSource(`${SSE_BASE}/risk/stream`);
   es.onmessage = (ev) => {
     try {
       onMessage(JSON.parse(ev.data));
@@ -99,7 +124,7 @@ export function openCameraStream(
   ) => void
 ): EventSource | null {
   if (typeof window === "undefined") return null;
-  const es = new EventSource(`${POI_BRAIN_URL}/cameras/stream`);
+  const es = new EventSource(`${SSE_BASE}/cameras/stream`);
   es.onmessage = (ev) => {
     try {
       onMessage(JSON.parse(ev.data));
@@ -110,4 +135,4 @@ export function openCameraStream(
   return es;
 }
 
-export const POI_BRAIN_BASE_URL = POI_BRAIN_URL;
+export const POI_BRAIN_BASE_URL = DIRECT_BASE;
