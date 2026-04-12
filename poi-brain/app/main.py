@@ -45,7 +45,7 @@ async def _startup() -> None:
     _configure_logging()
     log.info("=" * 60)
     log.info("poi-brain starting — vlm=%s", settings.vlm_backend)
-    log.info("NIM: %s (%s)", settings.nim_base_url, settings.nim_model)
+    log.info("VLM: %s (%s)", settings.lmstudio_base_url, settings.lmstudio_model)
     log.info("=" * 60)
 
     env = detect_environment()

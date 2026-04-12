@@ -24,8 +24,8 @@ async def health():
         "hexCells": len(STATE.hex_cells),
         "modelVersion": STATE.model_version,
         "vlmBackend": settings.vlm_backend,
-        "nimBaseUrl": settings.nim_base_url,
-        "nimModel": settings.nim_model,
+        "nimBaseUrl": settings.lmstudio_base_url,
+        "nimModel": settings.lmstudio_model,
         "platform": {
             "os": env.os_name,
             "arch": env.arch,

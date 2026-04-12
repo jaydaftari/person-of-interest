@@ -9,15 +9,15 @@ import {
   toDataUrl,
 } from "./shared";
 
-const NIM_BASE_URL =
-  process.env.NIM_BASE_URL ?? "http://localhost:8000/v1";
-const NIM_MODEL =
-  process.env.NIM_MODEL ?? "meta/llama-3.2-11b-vision-instruct";
-const NIM_API_KEY = process.env.NIM_API_KEY ?? "nim";
+const VLM_BASE_URL =
+  process.env.LMSTUDIO_BASE_URL ?? "http://192.168.3.37:1234/v1";
+const VLM_MODEL =
+  process.env.LMSTUDIO_MODEL ?? "google/gemma-4-26b-a4b";
+const VLM_API_KEY = process.env.LMSTUDIO_API_KEY ?? "lm-studio";
 
-const nim = new OpenAI({
-  baseURL: NIM_BASE_URL,
-  apiKey: NIM_API_KEY,
+const vlm = new OpenAI({
+  baseURL: VLM_BASE_URL,
+  apiKey: VLM_API_KEY,
 });
 
 async function analyzeFrame(
@@ -29,17 +29,17 @@ async function analyzeFrame(
   const prompt = buildPrompt(opts);
 
   console.log(
-    "[nim] Sending frame to",
-    NIM_BASE_URL,
+    "[vlm] Sending frame to",
+    VLM_BASE_URL,
     "model:",
-    NIM_MODEL,
+    VLM_MODEL,
     opts.cameraId ? `camera=${opts.cameraId}` : ""
   );
 
   let completion;
   try {
-    completion = await nim.chat.completions.create({
-      model: NIM_MODEL,
+    completion = await vlm.chat.completions.create({
+      model: VLM_MODEL,
       temperature: 0.1,
       max_tokens: 800,
       response_format: {
@@ -63,7 +63,7 @@ async function analyzeFrame(
   } catch (err) {
     const anyErr = err as { status?: number; message?: string; error?: unknown };
     console.error(
-      "[nim] Request failed:",
+      "[vlm] Request failed:",
       anyErr.status ?? "?",
       anyErr.message,
       anyErr.error
@@ -83,7 +83,7 @@ async function analyzeFrame(
       riskScoreAtTime: opts.riskContext?.score,
     };
   } catch (parseError) {
-    console.error("[nim] JSON parse failed:", parseError);
+    console.error("[vlm] JSON parse failed:", parseError);
     return { events: [], rawResponse: text };
   }
 }

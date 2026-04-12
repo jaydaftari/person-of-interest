@@ -20,16 +20,12 @@ class Settings(BaseSettings):
     log_level: str = "info"
     cors_allow_origins: List[str] = ["*"]
 
-    # NIM (primary VLM)
-    nim_base_url: str = "http://localhost:8000/v1"
-    nim_model: str = "meta/llama-3.2-11b-vision-instruct"
-    nim_api_key: str = "nim"
-    nim_warmup_on_startup: bool = True
-
-    # LM Studio fallback
-    lmstudio_base_url: str = "http://localhost:1234/v1"
+    # VLM (LM Studio)
+    lmstudio_base_url: str = "http://192.168.3.37:1234/v1"
     lmstudio_model: str = "google/gemma-4-26b-a4b"
-    vlm_backend: str = "nim"
+    lmstudio_api_key: str = "lm-studio"
+    vlm_warmup_on_startup: bool = True
+    vlm_backend: str = "lmstudio"
 
     # NYC Open Data (SODA)
     soda_app_token: Optional[str] = None

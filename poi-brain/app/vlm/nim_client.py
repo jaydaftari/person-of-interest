@@ -64,9 +64,9 @@ class NimClient:
         model: Optional[str] = None,
         api_key: Optional[str] = None,
     ):
-        self.base_url = base_url or settings.nim_base_url
-        self.model = model or settings.nim_model
-        self.api_key = api_key or settings.nim_api_key
+        self.base_url = base_url or settings.lmstudio_base_url
+        self.model = model or settings.lmstudio_model
+        self.api_key = api_key or settings.lmstudio_api_key
         self._client = OpenAI(base_url=self.base_url, api_key=self.api_key)
 
     def _build_prompt(
