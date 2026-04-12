@@ -60,8 +60,9 @@ class Settings(BaseSettings):
     # Camera ingestion
     webcams_base: str = "https://webcams.nyctmc.org"
     camera_poll_interval_s: float = 3.0
-    camera_subset_size: int = 12
+    camera_subset_size: int = 400
     camera_manual_subset: List[str] = []
+    camera_boroughs: List[str] = ["Manhattan"]
 
     # Risk model
     h3_resolution: int = 9

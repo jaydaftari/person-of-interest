@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Camera, RiskScore } from "@/types";
 import { TIER_COLOR } from "@/lib/risk/tier";
 import { RiskBadge } from "./risk-badge";
@@ -12,40 +12,11 @@ interface CameraPopupProps {
   onClose: () => void;
 }
 
-/**
- * Assign a demo video clip to each camera. The real NYC DOT snapshot URLs
- * in the seed catalog return 404 so we can't drive live frames from the
- * browser yet; the sample .mp4s under /public/videos/ give the dashboard
- * something real-looking to show when a judge clicks a dot.
- *
- * On the DGX with the NYC DOT poller producing live JPEGs, swap this for
- * the SSE /cameras/stream latestThumbB64 push.
- */
-const DEMO_CLIPS = [
-  "/videos/Shoplifting0.mp4",
-  "/videos/Shoplifting1.mp4",
-  "/videos/Shoplifting2.mp4",
-  "/videos/Fighting0.mp4",
-  "/videos/Fighting1.mp4",
-  "/videos/Fighting2.mp4",
-  "/videos/Fighting3.mp4",
-  "/videos/Robbery1.mp4",
-  "/videos/Robbery2.mp4",
-  "/videos/Robbery3.mp4",
-  "/videos/Stealing1.mp4",
-  "/videos/Vandalism3.mp4",
-];
-
-function demoClipFor(cameraId: string): string {
-  let hash = 0;
-  for (let i = 0; i < cameraId.length; i++) {
-    hash = (hash * 31 + cameraId.charCodeAt(i)) | 0;
-  }
-  return DEMO_CLIPS[Math.abs(hash) % DEMO_CLIPS.length];
-}
+const REFRESH_MS = 5_000;
 
 export function CameraPopup({ camera, risk, onClose }: CameraPopupProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [imageSeed, setImageSeed] = useState(Date.now());
+  const [imgError, setImgError] = useState(false);
 
   useEffect(() => {
     if (!camera) return;
@@ -56,11 +27,23 @@ export function CameraPopup({ camera, risk, onClose }: CameraPopupProps) {
     return () => window.removeEventListener("keydown", handler);
   }, [camera, onClose]);
 
+  useEffect(() => {
+    if (!camera) return;
+    setImgError(false);
+    setImageSeed(Date.now());
+    const iv = setInterval(() => setImageSeed(Date.now()), REFRESH_MS);
+    return () => clearInterval(iv);
+  }, [camera?.id]);
+
   if (!camera) return null;
 
   const tier = risk?.tier ?? "low";
   const color = TIER_COLOR[tier];
-  const clip = demoClipFor(camera.id);
+
+  const snapshotUrl = camera.snapshotUrl;
+  const liveUrl = snapshotUrl
+    ? `${snapshotUrl}${snapshotUrl.includes("?") ? "&" : "?"}t=${imageSeed}`
+    : null;
 
   return (
     <div
@@ -78,21 +61,26 @@ export function CameraPopup({ camera, risk, onClose }: CameraPopupProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="relative aspect-video w-full bg-deck-bg">
-          <video
-            ref={videoRef}
-            className="absolute inset-0 h-full w-full object-cover"
-            src={clip}
-            autoPlay
-            muted
-            loop
-            playsInline
-          />
+          {liveUrl && !imgError ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              key={imageSeed}
+              src={liveUrl}
+              alt={camera.name}
+              className="absolute inset-0 h-full w-full object-cover"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="absolute inset-0 flex items-center justify-center text-[12px] font-bold uppercase tracking-[0.2em] text-white/30">
+              {imgError ? "camera offline" : "no feed url"}
+            </div>
+          )}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/50" />
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(rgba(0,0,0,0.3)_1px,transparent_1px)] [background-size:3px_3px] opacity-30 mix-blend-overlay" />
 
           <div className="absolute left-3 top-3 flex items-center gap-2 rounded-sm bg-black/70 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-400">
             <span className="h-2 w-2 animate-pulse rounded-full bg-emerald-400" />
-            LIVE · DEMO FOOTAGE
+            LIVE · NYC DOT
           </div>
           <div className="absolute right-3 top-3">
             <RiskBadge tier={tier} score={risk?.score} />
@@ -145,16 +133,6 @@ export function CameraPopup({ camera, risk, onClose }: CameraPopupProps) {
               <br />
               {camera.latLng ? Math.abs(camera.latLng[1]).toFixed(4) : "—"}° W
             </div>
-            {camera.precinctId && (
-              <>
-                <div className="mt-2 text-[9px] uppercase tracking-[0.2em] text-white/40">
-                  Precinct
-                </div>
-                <div className="mt-0.5 font-mono text-[11px] text-white/70">
-                  {camera.precinctId}
-                </div>
-              </>
-            )}
             {camera.h3Cell && (
               <>
                 <div className="mt-2 text-[9px] uppercase tracking-[0.2em] text-white/40">

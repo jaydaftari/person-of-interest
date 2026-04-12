@@ -65,10 +65,22 @@ async def _analyze(camera: Camera, jpeg_b64: str) -> List[FrameEvent]:
         return []
 
 
+POLLER_MAX_CAMERAS = 12
+
+
 async def _poll_once(client: httpx.AsyncClient) -> None:
-    cameras = list(STATE.cameras.values())
-    if not cameras:
+    all_cameras = list(STATE.cameras.values())
+    if not all_cameras:
         return
+
+    # The map/dashboard can show hundreds of cameras, but the poller only
+    # processes a small rotating window each cycle to avoid overloading
+    # the VLM. Each cycle picks the next POLLER_MAX_CAMERAS cameras in a
+    # round-robin. Risk scores + snapshot thumbnails accumulate over time.
+    cycle = getattr(_poll_once, "_cycle", 0)
+    start = (cycle * POLLER_MAX_CAMERAS) % len(all_cameras)
+    cameras = all_cameras[start : start + POLLER_MAX_CAMERAS]
+    _poll_once._cycle = cycle + 1  # type: ignore[attr-defined]
 
     index = get_index()
 
