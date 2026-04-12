@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
+import { cellToBoundary } from "h3-js";
 import type { Camera, Heatmap, PatrolRoute, RiskScore } from "@/types";
 import { TIER_COLOR } from "@/lib/risk/tier";
 
@@ -134,16 +135,15 @@ export function RiskHeatmapMap({
   useEffect(() => {
     if (!mapReady || !mapRef.current || !heatmap) return;
 
-    (async () => {
-      try {
-        const h3 = await import("h3-js");
-        const features = heatmap.cells.map((cell) => {
-          const boundary =
-            (h3 as any).cellToBoundary?.(cell.h3Index, true) ??
-            (h3 as any).h3ToGeoBoundary?.(cell.h3Index, true);
-          if (!boundary) return null;
-          const coords = boundary.map((p: [number, number]) => [p[0], p[1]]);
-          if (coords.length && coords[0] !== coords[coords.length - 1]) {
+    try {
+      const features = heatmap.cells
+        .map((cell) => {
+          // cellToBoundary returns [lat, lng] pairs by default; passing true
+          // flips to [lng, lat] (GeoJSON order).
+          const boundary = cellToBoundary(cell.h3Index, true);
+          if (!boundary || boundary.length === 0) return null;
+          const coords = boundary.map(([lng, lat]) => [lng, lat]);
+          if (coords[0] !== coords[coords.length - 1]) {
             coords.push(coords[0]);
           }
           return {
@@ -159,16 +159,16 @@ export function RiskHeatmapMap({
               color: TIER_COLOR[cell.tier],
             },
           };
-        }).filter(Boolean);
+        })
+        .filter(Boolean);
 
-        const src = mapRef.current.getSource("hex-risk");
-        if (src) {
-          src.setData({ type: "FeatureCollection", features });
-        }
-      } catch (err) {
-        console.error("[map] heatmap update failed", err);
+      const src = mapRef.current.getSource("hex-risk");
+      if (src) {
+        src.setData({ type: "FeatureCollection", features });
       }
-    })();
+    } catch (err) {
+      console.error("[map] heatmap update failed", err);
+    }
   }, [mapReady, heatmap]);
 
   useEffect(() => {
