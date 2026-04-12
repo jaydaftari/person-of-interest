@@ -11,12 +11,11 @@ import { useCategories } from "@/lib/hooks/useCategories";
 import { RiskHeatmapMap } from "@/components/risk-heatmap-map";
 import { CameraFloat } from "@/components/camera-float";
 import { ForecastPanel } from "@/components/forecast-panel";
-import { RiskBadge } from "@/components/risk-badge";
 import { CategoryPicker } from "@/components/category-picker";
 import { TimeSlider } from "@/components/time-slider";
+import { CameraPopup } from "@/components/camera-popup";
 import { events as demoEvents } from "@/lib/data";
 import { EventFeed } from "@/components/event-feed";
-import { TIER_COLOR } from "@/lib/risk/tier";
 import type { HazardCategoryId } from "@/types";
 
 export default function MissionControlPage() {
@@ -227,53 +226,15 @@ export default function MissionControlPage() {
           </div>
         </div>
 
-        {selectedCameraId &&
-          (() => {
-            const cam = cameras.find((c) => c.id === selectedCameraId);
-            const risk = cam ? risksByCamera[cam.id] : undefined;
-            if (!cam) return null;
-            return (
-              <div className="pointer-events-auto max-w-md rounded-md border border-white/10 bg-black/80 px-4 py-3 backdrop-blur-md">
-                <div className="flex items-center justify-between gap-4">
-                  <div className="min-w-0">
-                    <div className="text-[9px] uppercase tracking-[0.2em] text-white/40">
-                      SELECTED NODE
-                    </div>
-                    <div className="mt-0.5 truncate text-sm font-bold uppercase tracking-tight text-white">
-                      {cam.name}
-                    </div>
-                    <div className="truncate text-[10px] text-white/60">
-                      {cam.address}
-                    </div>
-                  </div>
-                  {risk && <RiskBadge tier={risk.tier} score={risk.score} />}
-                </div>
-                {risk?.reasons && risk.reasons.length > 0 && (
-                  <div className="mt-2 border-t border-white/10 pt-2">
-                    <div className="text-[9px] uppercase tracking-[0.18em] text-white/40">
-                      why flagged
-                    </div>
-                    <ul className="mt-1 space-y-0.5 text-[11px] leading-snug text-white/80">
-                      {risk.reasons.slice(0, 4).map((r, i) => (
-                        <li key={i} className="flex gap-2">
-                          <span style={{ color: TIER_COLOR[risk.tier] }}>›</span>
-                          {r}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setSelectedCameraId(null)}
-                  className="mt-2 text-[9px] uppercase tracking-[0.2em] text-white/40 hover:text-white/80"
-                >
-                  close
-                </button>
-              </div>
-            );
-          })()}
       </footer>
+
+      <CameraPopup
+        camera={cameras.find((c) => c.id === selectedCameraId) ?? null}
+        risk={
+          selectedCameraId ? risksByCamera[selectedCameraId] : undefined
+        }
+        onClose={() => setSelectedCameraId(null)}
+      />
 
       {heatmapError && (
         <div className="pointer-events-none absolute bottom-4 left-1/2 z-30 -translate-x-1/2 rounded-md border border-red-500/40 bg-black/80 px-3 py-2 text-[10px] uppercase tracking-wider text-red-400 backdrop-blur-md">

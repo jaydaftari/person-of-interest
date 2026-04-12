@@ -67,20 +67,21 @@ export function RiskHeatmapMap({
             source: "hex-risk",
             paint: {
               "fill-color": ["get", "color"],
+              // Tier-driven opacity so low cells sit as a faint background
+              // wash while hotspots pop. Keeps the map readable even when
+              // every cell in NYC is rendered.
               "fill-opacity": [
-                "interpolate",
-                ["linear"],
-                ["get", "score"],
-                0,
-                0.08,
-                0.35,
+                "match",
+                ["get", "tier"],
+                "critical",
+                0.78,
+                "high",
+                0.55,
+                "med",
                 0.28,
-                0.6,
-                0.5,
-                0.8,
-                0.7,
-                1,
-                0.85,
+                "low",
+                0.05,
+                0.05,
               ],
             },
           });
@@ -90,8 +91,32 @@ export function RiskHeatmapMap({
             source: "hex-risk",
             paint: {
               "line-color": ["get", "color"],
-              "line-width": 0.6,
-              "line-opacity": 0.55,
+              "line-width": [
+                "match",
+                ["get", "tier"],
+                "critical",
+                1.1,
+                "high",
+                0.8,
+                "med",
+                0.5,
+                "low",
+                0.0,
+                0.0,
+              ],
+              "line-opacity": [
+                "match",
+                ["get", "tier"],
+                "critical",
+                0.85,
+                "high",
+                0.65,
+                "med",
+                0.4,
+                "low",
+                0.0,
+                0.0,
+              ],
             },
           });
 
