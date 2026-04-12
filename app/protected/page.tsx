@@ -13,6 +13,7 @@ import { CameraFloat } from "@/components/camera-float";
 import { ForecastPanel } from "@/components/forecast-panel";
 import { RiskBadge } from "@/components/risk-badge";
 import { CategoryPicker } from "@/components/category-picker";
+import { TimeSlider } from "@/components/time-slider";
 import { events as demoEvents } from "@/lib/data";
 import { EventFeed } from "@/components/event-feed";
 import { TIER_COLOR } from "@/lib/risk/tier";
@@ -20,9 +21,14 @@ import type { HazardCategoryId } from "@/types";
 
 export default function MissionControlPage() {
   const [category, setCategory] = useState<HazardCategoryId>("all");
+  const [hourOfWeek, setHourOfWeek] = useState<number | undefined>(undefined);
   const categories = useCategories();
   const { cameras, source } = useCameras();
-  const { heatmap, loading: heatmapLoading, error: heatmapError } = useHeatmap(9, category);
+  const { heatmap, loading: heatmapLoading, error: heatmapError } = useHeatmap(
+    9,
+    category,
+    hourOfWeek
+  );
   const { risksByCamera, connected } = useRiskStream();
   const { stats } = useForecastStats(category);
   const { routes } = usePatrolRoutes();
@@ -146,6 +152,11 @@ export default function MissionControlPage() {
             categories={categories}
             value={category}
             onChange={setCategory}
+          />
+          <TimeSlider
+            value={hourOfWeek}
+            onChange={setHourOfWeek}
+            className="w-[420px]"
           />
         </div>
       </header>

@@ -2,11 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 
 const POI_BRAIN_URL = process.env.POI_BRAIN_URL ?? "http://localhost:8080";
 
+const FORWARD_PARAMS = ["resolution", "category", "hour_of_week", "top"] as const;
+
 export async function GET(req: NextRequest) {
-  const resolution = req.nextUrl.searchParams.get("resolution") ?? "9";
+  const params = new URLSearchParams();
+  for (const key of FORWARD_PARAMS) {
+    const val = req.nextUrl.searchParams.get(key);
+    if (val !== null) params.set(key, val);
+  }
+  if (!params.has("resolution")) params.set("resolution", "9");
   try {
     const res = await fetch(
-      `${POI_BRAIN_URL}/risk/heatmap?resolution=${encodeURIComponent(resolution)}`,
+      `${POI_BRAIN_URL}/risk/heatmap?${params.toString()}`,
       { cache: "no-store" }
     );
     if (!res.ok) {

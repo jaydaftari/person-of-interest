@@ -124,17 +124,33 @@ def _normalize_counts_to_scores(counts: np.ndarray) -> np.ndarray:
     return (clipped / top).astype("float32")
 
 
-def _compute_hex_scores() -> Dict[str, dict]:
+def _load_or_refresh_fused_cache() -> pd.DataFrame | None:
+    """Fuse once, cache in STATE so time-of-week re-scoring is cheap."""
+    if STATE.fused_df is not None:
+        return STATE.fused_df
     fused = fuse_to_training_frame()
     if fused is None or len(fused) == 0:
-        return {}
+        return None
     pdf = fused.to_pandas() if hasattr(fused, "to_pandas") else fused
-    if pdf.empty:
+    STATE.fused_df = pdf
+    return pdf
+
+
+def _compute_hex_scores(
+    hour_of_week_override: int | None = None,
+) -> Dict[str, dict]:
+    pdf = _load_or_refresh_fused_cache()
+    if pdf is None or pdf.empty:
         return {}
+
+    pdf = pdf.copy()
+    if hour_of_week_override is not None:
+        clamped = int(hour_of_week_override) % (24 * 7)
+        pdf["hour_of_week"] = clamped
+        pdf["is_weekend"] = int(clamped >= 24 * 5)
 
     scores = np.asarray(score_features(pdf), dtype="float32")
     tiers = _assign_tiers(scores)
-    pdf = pdf.copy()
     pdf["score"] = scores
     pdf["tier"] = tiers
 
@@ -219,7 +235,28 @@ def _now_window():
     return now.isoformat(), end.isoformat()
 
 
+def _compute_hex_cells_for_hour(hour_of_week: int) -> list[HexCell]:
+    """On-demand scoring for a user-supplied hour. Returns HexCells rather
+    than mutating STATE, so multiple slider positions can query in parallel.
+    """
+    hex_scores = _compute_hex_scores(hour_of_week_override=hour_of_week)
+    if not hex_scores:
+        return []
+    return [
+        HexCell(
+            h3Index=h3_idx,
+            score=info["score"],
+            tier=info["tier"],
+            contributingFactors=info["features"],
+            incidentCountForecast=info["features"].get("crime_90d", 0) / 90.0,
+            categories=info.get("categories", {}),
+        )
+        for h3_idx, info in hex_scores.items()
+    ]
+
+
 async def recompute_once() -> None:
+    STATE.fused_df = None  # force re-fuse so 60s tick picks up fresh wall-clock
     hex_scores = await asyncio.to_thread(_compute_hex_scores)
     if not hex_scores:
         log.warning("[risk] no hex scores computed")

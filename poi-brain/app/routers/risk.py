@@ -11,6 +11,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from ..config import settings
 from ..pipeline.categories import ALL_CATEGORY_IDS, CATEGORIES, NON_ALL_IDS
+from ..pipeline.risk_engine import _compute_hex_cells_for_hour
 from ..schemas import Heatmap, HexCell, RiskScore
 from ..state import STATE, subscribe_risk, unsubscribe_risk
 
@@ -65,11 +66,24 @@ async def get_heatmap(
     resolution: int = Query(default=None),
     top: int = Query(default=600, ge=1, le=50000),
     category: str = Query(default="all"),
+    hour_of_week: int | None = Query(
+        default=None,
+        ge=0,
+        le=167,
+        description="Override wall-clock hour_of_week (0-167) to simulate risk at a specific time",
+    ),
 ):
     if category not in ALL_CATEGORY_IDS:
         raise HTTPException(status_code=400, detail=f"unknown category {category}")
     res = resolution or settings.h3_resolution
-    projected = [_project_cell_for_category(c, category) for c in STATE.hex_cells]
+
+    if hour_of_week is not None:
+        # On-demand re-score using the cached fused frame with a custom hour.
+        source_cells = _compute_hex_cells_for_hour(hour_of_week)
+    else:
+        source_cells = STATE.hex_cells
+
+    projected = [_project_cell_for_category(c, category) for c in source_cells]
     cells = sorted(projected, key=lambda c: c.score, reverse=True)[:top]
     now = datetime.now(tz=timezone.utc)
     end = now + timedelta(minutes=settings.prediction_window_minutes)

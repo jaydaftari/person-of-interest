@@ -7,6 +7,7 @@ import type { HazardCategoryId, Heatmap } from "@/types";
 export function useHeatmap(
   resolution = 9,
   category: HazardCategoryId = "all",
+  hourOfWeek?: number,
   pollMs = 10_000
 ) {
   const [heatmap, setHeatmap] = useState<Heatmap | null>(null);
@@ -19,7 +20,7 @@ export function useHeatmap(
 
     async function tick() {
       try {
-        const data = await fetchHeatmap(resolution, category);
+        const data = await fetchHeatmap(resolution, category, hourOfWeek);
         if (!cancelled) {
           setHeatmap(data);
           setError(null);
@@ -31,7 +32,8 @@ export function useHeatmap(
           setLoading(false);
         }
       } finally {
-        if (!cancelled) timer = setTimeout(tick, pollMs);
+        // When the slider is active we don't poll — the user drives updates.
+        if (!cancelled && hourOfWeek === undefined) timer = setTimeout(tick, pollMs);
       }
     }
 
@@ -40,7 +42,7 @@ export function useHeatmap(
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [resolution, category, pollMs]);
+  }, [resolution, category, hourOfWeek, pollMs]);
 
   return { heatmap, error, loading };
 }

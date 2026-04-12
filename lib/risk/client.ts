@@ -28,11 +28,17 @@ export async function fetchCameras(): Promise<Camera[]> {
 
 export async function fetchHeatmap(
   resolution = 9,
-  category: HazardCategoryId = "all"
+  category: HazardCategoryId = "all",
+  hourOfWeek?: number
 ): Promise<Heatmap> {
-  return getJson<Heatmap>(
-    `/risk/heatmap?resolution=${resolution}&category=${category}`
-  );
+  const params = new URLSearchParams({
+    resolution: String(resolution),
+    category,
+  });
+  if (hourOfWeek !== undefined) {
+    params.set("hour_of_week", String(hourOfWeek));
+  }
+  return getJson<Heatmap>(`/risk/heatmap?${params.toString()}`);
 }
 
 export async function fetchCategories(): Promise<HazardCategory[]> {
