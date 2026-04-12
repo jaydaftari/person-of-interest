@@ -14,8 +14,6 @@ import { ForecastPanel } from "@/components/forecast-panel";
 import { CategoryPicker } from "@/components/category-picker";
 import { TimeSlider } from "@/components/time-slider";
 import { CameraPopup } from "@/components/camera-popup";
-import { events as demoEvents } from "@/lib/data";
-import { EventFeed } from "@/components/event-feed";
 import type { HazardCategoryId } from "@/types";
 
 export default function MissionControlPage() {
@@ -34,7 +32,6 @@ export default function MissionControlPage() {
   const health = useBrainHealth();
 
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
-  const [eventFeedOpen, setEventFeedOpen] = useState(true);
 
   const visibleCameras = useMemo(() => {
     const withGeo = cameras.filter((c) => c.latLng);
@@ -185,32 +182,6 @@ export default function MissionControlPage() {
         </div>
       </aside>
 
-      <aside
-        className={`pointer-events-auto absolute bottom-4 right-4 top-28 z-10 flex w-[340px] flex-col overflow-hidden rounded-md border border-white/10 bg-black/70 backdrop-blur-md transition-transform ${
-          eventFeedOpen ? "translate-x-0" : "translate-x-[92%]"
-        }`}
-      >
-        <button
-          type="button"
-          onClick={() => setEventFeedOpen((v) => !v)}
-          className="flex items-center justify-between border-b border-white/10 px-4 py-3 text-left"
-        >
-          <div className="text-[10px] uppercase tracking-[0.2em] text-white/60">
-            EVENT LOG
-          </div>
-          <div className="text-[10px] uppercase tracking-[0.2em] text-deck-signal">
-            {eventFeedOpen ? "hide ›" : "‹ show"}
-          </div>
-        </button>
-        <div className="flex-1 overflow-y-auto p-4">
-          <EventFeed
-            events={demoEvents}
-            videoTimes={{}}
-            onEventHover={() => {}}
-            onEventClick={(cameraId) => setSelectedCameraId(cameraId)}
-          />
-        </div>
-      </aside>
 
       <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-4 p-4">
         <div className="pointer-events-auto rounded-md border border-white/10 bg-black/70 px-3 py-2 backdrop-blur-md">
