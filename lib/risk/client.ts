@@ -1,6 +1,8 @@
 import type {
   Camera,
   ForecastStats,
+  HazardCategory,
+  HazardCategoryId,
   Heatmap,
   PatrolRoute,
   RiskScore,
@@ -24,8 +26,17 @@ export async function fetchCameras(): Promise<Camera[]> {
   return getJson<Camera[]>("/cameras");
 }
 
-export async function fetchHeatmap(resolution = 9): Promise<Heatmap> {
-  return getJson<Heatmap>(`/risk/heatmap?resolution=${resolution}`);
+export async function fetchHeatmap(
+  resolution = 9,
+  category: HazardCategoryId = "all"
+): Promise<Heatmap> {
+  return getJson<Heatmap>(
+    `/risk/heatmap?resolution=${resolution}&category=${category}`
+  );
+}
+
+export async function fetchCategories(): Promise<HazardCategory[]> {
+  return getJson<HazardCategory[]>("/risk/categories");
 }
 
 export async function fetchCameraRisk(
@@ -40,8 +51,10 @@ export async function fetchCameraRisk(
   }
 }
 
-export async function fetchForecastStats(): Promise<ForecastStats> {
-  return getJson<ForecastStats>("/stats/forecast");
+export async function fetchForecastStats(
+  category: HazardCategoryId = "all"
+): Promise<ForecastStats> {
+  return getJson<ForecastStats>(`/stats/forecast?category=${category}`);
 }
 
 export async function fetchPatrolRoutes(): Promise<PatrolRoute[]> {

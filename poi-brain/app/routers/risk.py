@@ -10,24 +10,67 @@ from fastapi import APIRouter, HTTPException, Query
 from sse_starlette.sse import EventSourceResponse
 
 from ..config import settings
+from ..pipeline.categories import ALL_CATEGORY_IDS, CATEGORIES, NON_ALL_IDS
 from ..schemas import Heatmap, HexCell, RiskScore
 from ..state import STATE, subscribe_risk, unsubscribe_risk
 
 router = APIRouter(prefix="/risk", tags=["risk"])
 
 
+def _project_cell_for_category(cell: HexCell, category: str) -> HexCell:
+    """Return a copy of the hex cell whose score/tier reflect the given
+    category. category='all' returns the aggregate (unchanged)."""
+    if category == "all":
+        return cell
+    cat_info = cell.categories.get(category)
+    if cat_info is None:
+        return cell.model_copy(
+            update={
+                "score": 0.0,
+                "tier": "low",
+            }
+        )
+    return cell.model_copy(
+        update={
+            "score": cat_info.score,
+            "tier": cat_info.tier,
+        }
+    )
+
+
+@router.get("/categories")
+async def list_categories():
+    return [
+        {
+            "id": c.id,
+            "label": c.label,
+            "description": c.description,
+        }
+        for c in CATEGORIES
+    ]
+
+
 @router.get("/hex", response_model=List[HexCell])
-async def list_hex_cells(resolution: int | None = Query(None)):
-    return STATE.hex_cells
+async def list_hex_cells(
+    resolution: int | None = Query(None),
+    category: str = Query(default="all"),
+):
+    if category not in ALL_CATEGORY_IDS:
+        raise HTTPException(status_code=400, detail=f"unknown category {category}")
+    return [_project_cell_for_category(c, category) for c in STATE.hex_cells]
 
 
 @router.get("/heatmap", response_model=Heatmap)
 async def get_heatmap(
     resolution: int = Query(default=None),
-    top: int = Query(default=400, ge=1, le=5000),
+    top: int = Query(default=600, ge=1, le=50000),
+    category: str = Query(default="all"),
 ):
+    if category not in ALL_CATEGORY_IDS:
+        raise HTTPException(status_code=400, detail=f"unknown category {category}")
     res = resolution or settings.h3_resolution
-    cells = sorted(STATE.hex_cells, key=lambda c: c.score, reverse=True)[:top]
+    projected = [_project_cell_for_category(c, category) for c in STATE.hex_cells]
+    cells = sorted(projected, key=lambda c: c.score, reverse=True)[:top]
     now = datetime.now(tz=timezone.utc)
     end = now + timedelta(minutes=settings.prediction_window_minutes)
     return Heatmap(

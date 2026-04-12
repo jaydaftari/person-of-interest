@@ -155,21 +155,80 @@ the mission-control dashboard with the H3 heatmap glowing over NYC, NYC DOT
 camera tiles pinned to their real locations, and live risk scores flowing in
 over SSE.
 
-## Local (Mac / no CUDA)
+## Local dev on Mac (Apple Silicon GPU via MPS)
+
+The ML backend auto-detects your hardware at startup and picks the fastest
+path available. On an M-series Mac with `torch>=2.3` installed, it will pick
+**PyTorch MPS** and train on the Apple GPU. The model file it saves
+(`risk_model.pt`) is a plain PyTorch state_dict and is **fully portable** —
+the SAME file loads on the DGX's NVIDIA CUDA via `map_location`, so you can
+dev on your Mac and ship the trained model to the DGX without any code change.
 
 ```bash
 cd poi-brain
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements-cpu.txt
-export POI_FORCE_CPU=1
-python scripts/bootstrap_data.py   # uses pandas + sklearn
+pip install -r requirements-cpu.txt   # includes torch with MPS support
+cp .env.example .env
+# .env defaults: ML_BACKEND=auto, TORCH_DEVICE=auto — leave as-is
+python scripts/bootstrap_data.py
 uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
 ```
 
-RAPIDS falls back to pandas, NIM falls back to whatever's at `NIM_BASE_URL`
-(you can point it at LM Studio for a local dry-run by setting
-`NIM_BASE_URL=http://localhost:1234/v1 NIM_MODEL=google/gemma-4-26b-a4b`).
+At startup you should see the device probe log something like:
+
+```
+[device] platform=darwin-arm64 python=3.11.7
+[device]   rapids=no (cuDF/cuML not installed)
+[device]   torch=yes (2.8.0) cuda=no mps=yes cpu=12
+[device]   -> ml_backend=torch torch_device=mps
+[device]   Apple Silicon detected — Metal Performance Shaders active.
+[torch] training on device=mps
+```
+
+On the DGX that same probe will print:
+
+```
+[device] platform=linux-x86_64 python=3.11.7
+[device]   rapids=yes (cuDF/cuML loaded)
+[device]   torch=yes (2.8.0) cuda=yes mps=no cpu=32
+[device]   -> ml_backend=cuml-xgb torch_device=cuda
+[device]   NVIDIA Linux + RAPIDS — full GPU pipeline active.
+```
+
+### Forcing a specific backend
+
+```bash
+# In .env (or shell env)
+ML_BACKEND=torch        # force torch path even on NVIDIA
+ML_BACKEND=cuml-xgb     # force RAPIDS path (errors if not installed)
+ML_BACKEND=sklearn      # CPU-only safety net
+TORCH_DEVICE=cpu        # force torch onto CPU even if MPS/CUDA available
+TORCH_DEVICE=mps
+TORCH_DEVICE=cuda
+```
+
+### Transferring a Mac-trained model to the DGX
+
+```bash
+# On Mac, after bootstrap finishes
+scp ~/.poi/models/risk_model.pt dgx:/data/poi/models/risk_model.pt
+# On DGX, poi-brain will load it automatically on next start.
+# The state_dict is device-agnostic; load_bundle() moves it onto CUDA.
+```
+
+### Honest notes
+
+- **NIM is NVIDIA-only.** On Mac the camera poller will log errors hitting
+  NIM — that's expected. The risk pipeline still works without NIM (you
+  get the heatmap, per-camera risk, SSE stream, cuOpt routes). Optionally
+  point `NIM_BASE_URL` at a local LM Studio or vLLM server running Gemma
+  to get frame analysis working locally.
+- **For the hackathon demo, the DGX should use `cuml-xgb`, not torch.** The
+  RAPIDS pitch is a scoring criterion. Torch on MPS is for dev iteration.
+- The default data root is `/data/poi/` which is read-only on Mac. Config
+  auto-falls-back to `~/.poi/` so imports don't crash. Override with
+  `DATA_ROOT=/path/to/somewhere` in `.env` if you want a custom location.
 
 ## Configuration (`.env`)
 

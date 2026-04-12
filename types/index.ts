@@ -1,5 +1,25 @@
 export type RiskTier = "low" | "med" | "high" | "critical";
 
+export type HazardCategoryId =
+  | "all"
+  | "violent"
+  | "property"
+  | "public_order"
+  | "traffic_hazard"
+  | "environmental";
+
+export interface HazardCategory {
+  id: HazardCategoryId;
+  label: string;
+  description: string;
+}
+
+export interface CategoryScore {
+  score: number;
+  tier: RiskTier;
+  count: number;
+}
+
 export type ModelCoverage = "full" | "partial" | "none";
 
 export interface Camera {
@@ -79,6 +99,7 @@ export interface HexCell {
   tier: RiskTier;
   contributingFactors?: Record<string, number>;
   incidentCountForecast?: number;
+  categories?: Record<string, CategoryScore>;
 }
 
 export interface Heatmap {

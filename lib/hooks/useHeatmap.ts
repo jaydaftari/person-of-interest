@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { fetchHeatmap } from "@/lib/risk/client";
-import type { Heatmap } from "@/types";
+import type { HazardCategoryId, Heatmap } from "@/types";
 
-export function useHeatmap(resolution = 9, pollMs = 10_000) {
+export function useHeatmap(
+  resolution = 9,
+  category: HazardCategoryId = "all",
+  pollMs = 10_000
+) {
   const [heatmap, setHeatmap] = useState<Heatmap | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [loading, setLoading] = useState(true);
@@ -15,7 +19,7 @@ export function useHeatmap(resolution = 9, pollMs = 10_000) {
 
     async function tick() {
       try {
-        const data = await fetchHeatmap(resolution);
+        const data = await fetchHeatmap(resolution, category);
         if (!cancelled) {
           setHeatmap(data);
           setError(null);
@@ -36,7 +40,7 @@ export function useHeatmap(resolution = 9, pollMs = 10_000) {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [resolution, pollMs]);
+  }, [resolution, category, pollMs]);
 
   return { heatmap, error, loading };
 }

@@ -7,19 +7,24 @@ import { useRiskStream } from "@/lib/hooks/useRiskStream";
 import { useForecastStats } from "@/lib/hooks/useForecastStats";
 import { usePatrolRoutes } from "@/lib/hooks/usePatrolRoutes";
 import { useBrainHealth } from "@/lib/hooks/useBrainHealth";
+import { useCategories } from "@/lib/hooks/useCategories";
 import { RiskHeatmapMap } from "@/components/risk-heatmap-map";
 import { CameraFloat } from "@/components/camera-float";
 import { ForecastPanel } from "@/components/forecast-panel";
 import { RiskBadge } from "@/components/risk-badge";
+import { CategoryPicker } from "@/components/category-picker";
 import { events as demoEvents } from "@/lib/data";
 import { EventFeed } from "@/components/event-feed";
 import { TIER_COLOR } from "@/lib/risk/tier";
+import type { HazardCategoryId } from "@/types";
 
 export default function MissionControlPage() {
+  const [category, setCategory] = useState<HazardCategoryId>("all");
+  const categories = useCategories();
   const { cameras, source } = useCameras();
-  const { heatmap, loading: heatmapLoading, error: heatmapError } = useHeatmap(9);
+  const { heatmap, loading: heatmapLoading, error: heatmapError } = useHeatmap(9, category);
   const { risksByCamera, connected } = useRiskStream();
-  const { stats } = useForecastStats();
+  const { stats } = useForecastStats(category);
   const { routes } = usePatrolRoutes();
   const health = useBrainHealth();
 
@@ -38,6 +43,10 @@ export default function MissionControlPage() {
 
   const modelBackend = health?.vlmBackend ?? "nim";
   const rapidsOn = health?.rapids ?? false;
+  const mlBackend = health?.ml?.backend ?? "—";
+  const torchDevice = health?.ml?.torchDevice ?? "—";
+  const hasMps = health?.ml?.mpsAvailable ?? false;
+  const hasCuda = health?.ml?.cudaAvailable ?? false;
 
   return (
     <div className="fixed inset-0 bg-deck-bg text-deck-fg">
@@ -84,10 +93,60 @@ export default function MissionControlPage() {
               <span className="ml-2 text-amber-400">· brain unreachable</span>
             )}
           </div>
+          {health?.ok && (
+            <div className="mt-1 flex items-center gap-2 text-[8px] uppercase tracking-[0.16em] text-white/40">
+              <span>ml</span>
+              <span
+                className={
+                  mlBackend === "cuml-xgb"
+                    ? "text-[#76b900]"
+                    : mlBackend === "torch"
+                      ? "text-cyan-300"
+                      : "text-white/60"
+                }
+              >
+                {mlBackend}
+              </span>
+              <span className="text-white/20">·</span>
+              <span>dev</span>
+              <span
+                className={
+                  torchDevice === "cuda"
+                    ? "text-[#76b900]"
+                    : torchDevice === "mps"
+                      ? "text-cyan-300"
+                      : "text-white/50"
+                }
+              >
+                {torchDevice}
+              </span>
+              {(hasCuda || hasMps) && (
+                <>
+                  <span className="text-white/20">·</span>
+                  <span className="text-white/50">
+                    {hasCuda ? "cuda ✓" : hasMps ? "mps ✓" : ""}
+                  </span>
+                </>
+              )}
+              {health.platform?.os && (
+                <>
+                  <span className="text-white/20">·</span>
+                  <span className="text-white/50">
+                    {health.platform.os}-{health.platform.arch}
+                  </span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
-        <div className="pointer-events-auto">
+        <div className="pointer-events-auto flex flex-col items-end gap-2">
           <ForecastPanel stats={stats} vlmBackend={modelBackend} />
+          <CategoryPicker
+            categories={categories}
+            value={category}
+            onChange={setCategory}
+          />
         </div>
       </header>
 

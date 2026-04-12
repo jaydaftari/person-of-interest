@@ -52,27 +52,27 @@ def _write(df: pd.DataFrame, name: str) -> Path:
     return path
 
 
-def ingest_nypd_historic(limit: int = 500_000) -> Path:
-    df = _fetch(settings.nypd_historic_resource, limit=limit)
+def ingest_nypd_historic(limit: int | None = None) -> Path:
+    df = _fetch(settings.nypd_historic_resource, limit=limit or settings.nypd_historic_limit)
     return _write(df, "nypd_historic")
 
 
-def ingest_nypd_ytd(limit: int = 200_000) -> Path:
-    df = _fetch(settings.nypd_ytd_resource, limit=limit)
+def ingest_nypd_ytd(limit: int | None = None) -> Path:
+    df = _fetch(settings.nypd_ytd_resource, limit=limit or settings.nypd_ytd_limit)
     return _write(df, "nypd_ytd")
 
 
-def ingest_collisions(limit: int = 300_000) -> Path:
+def ingest_collisions(limit: int | None = None) -> Path:
     since = (datetime.utcnow() - timedelta(days=365 * 2)).strftime("%Y-%m-%dT00:00:00")
     df = _fetch(
         settings.collisions_resource,
         where=f"crash_date >= '{since}'",
-        limit=limit,
+        limit=limit or settings.collisions_limit,
     )
     return _write(df, "collisions")
 
 
-def ingest_311(limit: int = 300_000) -> Path:
+def ingest_311(limit: int | None = None) -> Path:
     since = (datetime.utcnow() - timedelta(days=120)).strftime("%Y-%m-%dT00:00:00")
     keep_types = (
         "'Street Light Condition'",
@@ -85,12 +85,16 @@ def ingest_311(limit: int = 300_000) -> Path:
     where = (
         f"created_date >= '{since}' AND complaint_type IN ({','.join(keep_types)})"
     )
-    df = _fetch(settings.service_req_311_resource, where=where, limit=limit)
+    df = _fetch(
+        settings.service_req_311_resource,
+        where=where,
+        limit=limit or settings.service_311_limit,
+    )
     return _write(df, "service_311")
 
 
-def ingest_dot_cameras(limit: int = 2_000) -> Path:
-    df = _fetch(settings.nyc_dot_cameras_resource, limit=limit)
+def ingest_dot_cameras(limit: int | None = None) -> Path:
+    df = _fetch(settings.nyc_dot_cameras_resource, limit=limit or settings.dot_cameras_limit)
     return _write(df, "dot_cameras")
 
 

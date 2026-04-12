@@ -22,6 +22,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .config import settings
 from .pipeline.camera_catalog import load_camera_catalog
 from .pipeline.camera_poller import run_poller_forever
+from .pipeline.device_probe import detect_environment
 from .pipeline.rapids_runtime import HAS_RAPIDS
 from .pipeline.retrieval import get_index
 from .pipeline.risk_engine import recompute_once, run_risk_engine_forever
@@ -43,9 +44,12 @@ def _configure_logging() -> None:
 async def _startup() -> None:
     _configure_logging()
     log.info("=" * 60)
-    log.info("poi-brain starting — rapids=%s vlm=%s", HAS_RAPIDS, settings.vlm_backend)
+    log.info("poi-brain starting — vlm=%s", settings.vlm_backend)
     log.info("NIM: %s (%s)", settings.nim_base_url, settings.nim_model)
     log.info("=" * 60)
+
+    env = detect_environment()
+    STATE.device_env = env  # type: ignore[attr-defined]
 
     cams = load_camera_catalog()
     STATE.cameras = {c.id: c for c in cams}
@@ -62,7 +66,11 @@ async def _startup() -> None:
             log.warning("training failed: %s", err)
     else:
         STATE.model_version = f"{bundle.get('backend', 'sklearn')}-v0"
-        log.info("loaded model backend=%s", bundle.get("backend"))
+        log.info(
+            "loaded model backend=%s device=%s",
+            bundle.get("backend"),
+            bundle.get("device", "n/a"),
+        )
 
     try:
         await asyncio.to_thread(get_index().load)

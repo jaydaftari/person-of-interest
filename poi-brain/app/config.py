@@ -42,6 +42,15 @@ class Settings(BaseSettings):
     service_req_311_resource: str = "erm2-nwe9"
     nyc_dot_cameras_resource: str = "9knp-kupa"
 
+    # Per-dataset row caps. Dev-scale defaults — enough to produce a real
+    # training frame with meaningful spread. Override for DGX full-fat runs:
+    #   NYPD_HISTORIC_LIMIT=500000 NYPD_YTD_LIMIT=300000 COLLISIONS_LIMIT=300000 ...
+    nypd_historic_limit: int = 250_000
+    nypd_ytd_limit: int = 150_000
+    collisions_limit: int = 150_000
+    service_311_limit: int = 200_000
+    dot_cameras_limit: int = 10_000
+
     # Storage
     data_root: Path = Path("/data/poi")
     parquet_root: Path = Path("/data/poi/parquet")
@@ -66,6 +75,11 @@ class Settings(BaseSettings):
     enable_cugraph: bool = False
     enable_cuopt: bool = False
 
+    # ML backend: "auto" | "cuml-xgb" | "torch" | "sklearn"
+    # auto = pick cuml-xgb on NVIDIA (DGX), torch on Mac/MPS, sklearn otherwise
+    ml_backend: str = "auto"
+    torch_device: str = "auto"  # "auto" | "cuda" | "mps" | "cpu"
+
     # Retrieval
     retrieval_backend: str = "faiss"
     retrieval_top_k: int = 5
@@ -75,10 +89,23 @@ class Settings(BaseSettings):
 
 settings = Settings()
 
-for p in (
-    settings.data_root,
-    settings.parquet_root,
-    settings.models_root,
-    settings.cache_root,
-):
-    p.mkdir(parents=True, exist_ok=True)
+# Best-effort data directory creation. On Mac dev machines /data is read-only,
+# so if the default path fails we fall back to ~/.poi so imports don't crash
+# at module load time. Users can override via DATA_ROOT in .env.
+def _ensure_writable_paths() -> None:
+    import os
+
+    for attr in ("data_root", "parquet_root", "models_root", "cache_root"):
+        p = getattr(settings, attr)
+        try:
+            p.mkdir(parents=True, exist_ok=True)
+            continue
+        except (PermissionError, OSError):
+            pass
+        home_fallback = Path.home() / ".poi" / p.name
+        home_fallback.mkdir(parents=True, exist_ok=True)
+        setattr(settings, attr, home_fallback)
+        os.environ.setdefault(attr.upper(), str(home_fallback))
+
+
+_ensure_writable_paths()

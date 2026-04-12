@@ -2,6 +2,22 @@
 
 import { useEffect, useState } from "react";
 
+export interface BrainPlatform {
+  os?: string;
+  arch?: string;
+  python?: string;
+}
+
+export interface BrainMlInfo {
+  backend?: "auto" | "cuml-xgb" | "torch" | "sklearn" | string;
+  torchDevice?: "cuda" | "mps" | "cpu" | string;
+  hasTorch?: boolean;
+  torchVersion?: string | null;
+  cudaAvailable?: boolean;
+  mpsAvailable?: boolean;
+  cpuCount?: number;
+}
+
 export interface BrainHealth {
   ok: boolean;
   rapids?: boolean;
@@ -12,6 +28,8 @@ export interface BrainHealth {
   nimBaseUrl?: string;
   nimModel?: string;
   uptimeSeconds?: number;
+  platform?: BrainPlatform;
+  ml?: BrainMlInfo;
   error?: string;
 }
 

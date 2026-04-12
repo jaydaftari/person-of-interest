@@ -40,4 +40,29 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Python / poi-brain — regeneratable from requirements-cpu.txt + bootstrap_data.py
+**/__pycache__/
+*.py[cod]
+*$py.class
+**/.venv/
+**/.venv-*/
+**/venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+*.egg
+
+# Trained model artifacts + local data cache (rebuild via scripts/bootstrap_data.py)
 *.pt
+*.pkl
+*.parquet
+poi-brain/.env
+poi-brain/data/
+/data/poi/
+
+# Docker / NIM cache
+nim-cache/
+
+# Jupyter
+.ipynb_checkpoints/

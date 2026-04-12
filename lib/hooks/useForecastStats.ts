@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { fetchForecastStats } from "@/lib/risk/client";
-import type { ForecastStats } from "@/types";
+import type { ForecastStats, HazardCategoryId } from "@/types";
 
-export function useForecastStats(pollMs = 30_000) {
+export function useForecastStats(
+  category: HazardCategoryId = "all",
+  pollMs = 30_000
+) {
   const [stats, setStats] = useState<ForecastStats | null>(null);
   const [error, setError] = useState<Error | null>(null);
 
@@ -14,7 +17,7 @@ export function useForecastStats(pollMs = 30_000) {
 
     async function tick() {
       try {
-        const data = await fetchForecastStats();
+        const data = await fetchForecastStats(category);
         if (!cancelled) {
           setStats(data);
           setError(null);
@@ -31,7 +34,7 @@ export function useForecastStats(pollMs = 30_000) {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [pollMs]);
+  }, [category, pollMs]);
 
   return { stats, error };
 }

@@ -21,11 +21,19 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
+from typing import Dict
 
 import h3
 import pandas as pd
 
 from ..config import settings
+from .categories import (
+    ALL_CATEGORY_IDS,
+    NON_ALL_IDS,
+    categorize_nypd,
+    count_column,
+    svc311_category,
+)
 from .rapids_runtime import HAS_RAPIDS, get_df_lib
 
 log = logging.getLogger("poi.fuse")
@@ -43,15 +51,15 @@ def _to_latlon(df: pd.DataFrame, lat_col: str, lon_col: str) -> pd.DataFrame:
     if lat_col not in df.columns or lon_col not in df.columns:
         return pd.DataFrame()
     df = df.dropna(subset=[lat_col, lon_col]).copy()
-    df["_lat"] = pd.to_numeric(df[lat_col], errors="coerce")
-    df["_lon"] = pd.to_numeric(df[lon_col], errors="coerce")
-    df = df.dropna(subset=["_lat", "_lon"])
+    df["lat"] = pd.to_numeric(df[lat_col], errors="coerce")
+    df["lon"] = pd.to_numeric(df[lon_col], errors="coerce")
+    df = df.dropna(subset=["lat", "lon"])
     lat_lo, lon_lo, lat_hi, lon_hi = (40.49, -74.26, 40.92, -73.68)
     df = df[
-        (df["_lat"] >= lat_lo)
-        & (df["_lat"] <= lat_hi)
-        & (df["_lon"] >= lon_lo)
-        & (df["_lon"] <= lon_hi)
+        (df["lat"] >= lat_lo)
+        & (df["lat"] <= lat_hi)
+        & (df["lon"] >= lon_lo)
+        & (df["lon"] <= lon_hi)
     ]
     return df
 
@@ -60,9 +68,11 @@ def _attach_h3(df: pd.DataFrame, resolution: int) -> pd.DataFrame:
     if df.empty:
         return df
     df = df.copy()
+    lats = df["lat"].to_numpy(dtype="float64")
+    lons = df["lon"].to_numpy(dtype="float64")
     df["h3"] = [
-        h3.latlng_to_cell(float(r._lat), float(r._lon), resolution)
-        for r in df.itertuples(index=False)
+        h3.latlng_to_cell(float(lat), float(lon), resolution)
+        for lat, lon in zip(lats, lons)
     ]
     return df
 
@@ -84,81 +94,151 @@ def fuse_to_training_frame(resolution: int | None = None) -> pd.DataFrame:
     nypd = pd.concat([nypd_hist, nypd_ytd], ignore_index=True) if len(nypd_hist) or len(nypd_ytd) else pd.DataFrame()
     nypd = _to_latlon(nypd, "latitude", "longitude")
     if not nypd.empty:
-        nypd["_dt"] = _parse_datetime(nypd.get("cmplnt_fr_dt"))
-        nypd = nypd.dropna(subset=["_dt"])
+        nypd["dt"] = _parse_datetime(nypd.get("cmplnt_fr_dt"))
+        nypd = nypd.dropna(subset=["dt"])
         nypd = _attach_h3(nypd, res)
 
     collisions = _to_latlon(collisions, "latitude", "longitude")
     if not collisions.empty:
-        collisions["_dt"] = _parse_datetime(collisions.get("crash_date"))
-        collisions = collisions.dropna(subset=["_dt"])
+        collisions["dt"] = _parse_datetime(collisions.get("crash_date"))
+        collisions = collisions.dropna(subset=["dt"])
         collisions = _attach_h3(collisions, res)
 
     svc311 = _to_latlon(svc311, "latitude", "longitude")
     if not svc311.empty:
-        svc311["_dt"] = _parse_datetime(svc311.get("created_date"))
-        svc311 = svc311.dropna(subset=["_dt"])
+        svc311["dt"] = _parse_datetime(svc311.get("created_date"))
+        svc311 = svc311.dropna(subset=["dt"])
         svc311 = _attach_h3(svc311, res)
 
+    # Data-relative cutoffs: anchor the rolling window to each dataset's own
+    # max timestamp, not wall-clock "now". NYC Open Data often lags real time
+    # by months, so a wall-clock cutoff of "last 90 days" returns zero rows
+    # against historic data. Using the dataset's latest date makes the window
+    # meaningful regardless of when the parquet was last refreshed.
+    def _recent_window(df: pd.DataFrame, days: int) -> pd.DataFrame:
+        if df.empty or "dt" not in df.columns:
+            return df
+        latest = df["dt"].max()
+        if pd.isna(latest):
+            return df
+        anchor = latest if latest < datetime.utcnow() else datetime.utcnow()
+        cutoff = anchor - timedelta(days=days)
+        return df[df["dt"] >= cutoff]
+
     now = datetime.utcnow()
-    cutoff_90 = now - timedelta(days=90)
-    cutoff_365 = now - timedelta(days=365)
-    cutoff_30 = now - timedelta(days=30)
+
+    nypd_recent = _recent_window(nypd, 90) if not nypd.empty else nypd
+    collisions_recent = (
+        _recent_window(collisions, 365) if not collisions.empty else collisions
+    )
+    svc311_recent = _recent_window(svc311, 30) if not svc311.empty else svc311
 
     crime_counts = (
-        nypd[nypd["_dt"] >= cutoff_90].groupby("h3").size()
-        if not nypd.empty
-        else pd.Series(dtype="int64")
+        nypd_recent.groupby("h3").size() if not nypd_recent.empty else pd.Series(dtype="int64")
     )
     collision_counts = (
-        collisions[collisions["_dt"] >= cutoff_365].groupby("h3").size()
-        if not collisions.empty
+        collisions_recent.groupby("h3").size()
+        if not collisions_recent.empty
         else pd.Series(dtype="int64")
     )
 
     def _svc_subset(complaint: str) -> pd.Series:
-        if svc311.empty:
+        if svc311_recent.empty:
             return pd.Series(dtype="int64")
-        keep = svc311[
-            (svc311["_dt"] >= cutoff_30)
-            & (svc311.get("complaint_type") == complaint)
-        ]
+        keep = svc311_recent[svc311_recent.get("complaint_type") == complaint]
         return keep.groupby("h3").size()
 
     light_counts = _svc_subset("Street Light Condition")
     signal_counts = _svc_subset("Traffic Signal Condition")
     noise_counts = _svc_subset("Noise - Street/Sidewalk")
 
+    # Per-category counts — the new part. Each category aggregates rows from
+    # the right source dataset, bucketed by h3.
+    category_counts: Dict[str, pd.Series] = {}
+
+    if not nypd_recent.empty and "ofns_desc" in nypd_recent.columns:
+        tagged = nypd_recent.copy()
+        tagged["_cat"] = tagged["ofns_desc"].map(categorize_nypd)
+        for cat_id in NON_ALL_IDS:
+            subset = tagged[tagged["_cat"] == cat_id]
+            if subset.empty:
+                continue
+            category_counts[cat_id] = (
+                category_counts.get(cat_id, pd.Series(dtype="int64"))
+                .add(subset.groupby("h3").size(), fill_value=0)
+            )
+
+    if not collisions_recent.empty:
+        col_counts = collisions_recent.groupby("h3").size()
+        category_counts["traffic_hazard"] = (
+            category_counts.get("traffic_hazard", pd.Series(dtype="int64"))
+            .add(col_counts, fill_value=0)
+        )
+
+    if not svc311_recent.empty and "complaint_type" in svc311_recent.columns:
+        tagged311 = svc311_recent.copy()
+        tagged311["_cat"] = tagged311["complaint_type"].map(svc311_category)
+        for cat_id in NON_ALL_IDS:
+            subset = tagged311[tagged311["_cat"] == cat_id]
+            if subset.empty:
+                continue
+            category_counts[cat_id] = (
+                category_counts.get(cat_id, pd.Series(dtype="int64"))
+                .add(subset.groupby("h3").size(), fill_value=0)
+            )
+
     all_cells = set()
     for s in (crime_counts, collision_counts, light_counts, signal_counts, noise_counts):
+        all_cells.update(s.index.tolist())
+    for s in category_counts.values():
         all_cells.update(s.index.tolist())
 
     hour_of_week = now.weekday() * 24 + now.hour
 
     rows = []
     for cell in all_cells:
-        rows.append(
-            {
-                "h3": cell,
-                "crime_90d": int(crime_counts.get(cell, 0)),
-                "collision_365d": int(collision_counts.get(cell, 0)),
-                "streetlight_30d": int(light_counts.get(cell, 0)),
-                "signal_30d": int(signal_counts.get(cell, 0)),
-                "noise_30d": int(noise_counts.get(cell, 0)),
-                "hour_of_week": hour_of_week,
-                "is_weekend": int(now.weekday() >= 5),
-            }
-        )
+        row = {
+            "h3": cell,
+            "crime_90d": int(crime_counts.get(cell, 0)),
+            "collision_365d": int(collision_counts.get(cell, 0)),
+            "streetlight_30d": int(light_counts.get(cell, 0)),
+            "signal_30d": int(signal_counts.get(cell, 0)),
+            "noise_30d": int(noise_counts.get(cell, 0)),
+            "hour_of_week": hour_of_week,
+            "is_weekend": int(now.weekday() >= 5),
+        }
+        total = 0
+        for cat_id in NON_ALL_IDS:
+            count = int(category_counts.get(cat_id, pd.Series(dtype="int64")).get(cell, 0))
+            row[count_column(cat_id)] = count
+            total += count
+        row[count_column("all")] = total
+        rows.append(row)
     fused = pd.DataFrame(rows)
     if fused.empty:
         log.warning("[fuse] empty fused frame — did ingest run?")
         return fused
 
-    fused["label"] = (
-        (fused["crime_90d"] >= 3).astype(int)
-        | (fused["collision_365d"] >= 5).astype(int)
+    # Dataset-size-adaptive label. For each hex cell we build a combined
+    # danger score from recent crime + collision density, then mark the top
+    # 25% (by score) as positive. This gives a balanced training signal
+    # regardless of whether we pulled 5K rows (dev) or 500K (DGX).
+    score_raw = (
+        fused["crime_90d"].astype("float32") * 1.0
+        + fused["collision_365d"].astype("float32") * 0.4
+        + fused["streetlight_30d"].astype("float32") * 0.6
     )
-    log.info("[fuse] fused shape=%s label_rate=%.3f", fused.shape, fused["label"].mean())
+    if score_raw.max() <= 0:
+        fused["label"] = 0
+    else:
+        threshold = score_raw.quantile(0.75)
+        fused["label"] = (score_raw > threshold).astype(int)
+    log.info(
+        "[fuse] fused shape=%s label_rate=%.3f (top-quartile threshold=%.2f)",
+        fused.shape,
+        fused["label"].mean(),
+        float(score_raw.quantile(0.75)) if len(score_raw) else 0.0,
+    )
 
     if HAS_RAPIDS:
         try:

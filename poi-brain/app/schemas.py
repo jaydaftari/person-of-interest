@@ -35,12 +35,19 @@ class RiskScore(BaseModel):
     modelVersion: str
 
 
+class CategoryScore(BaseModel):
+    score: float = Field(ge=0.0, le=1.0)
+    tier: RiskTier
+    count: int
+
+
 class HexCell(BaseModel):
     h3Index: str
     score: float = Field(ge=0.0, le=1.0)
     tier: RiskTier
     contributingFactors: Dict[str, float] = {}
     incidentCountForecast: Optional[float] = None
+    categories: Dict[str, CategoryScore] = {}
 
 
 class Heatmap(BaseModel):
