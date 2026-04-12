@@ -82,11 +82,11 @@ async def _startup() -> None:
     except Exception as err:
         log.warning("initial risk compute failed: %s", err)
 
-    if settings.nim_warmup_on_startup:
+    if settings.vlm_warmup_on_startup:
         try:
             await asyncio.to_thread(get_vlm_client().warmup)
         except Exception as err:
-            log.warning("NIM warmup failed: %s", err)
+            log.warning("VLM warmup failed: %s", err)
 
 
 async def _spawn_background_tasks(app: FastAPI) -> list[asyncio.Task]:
