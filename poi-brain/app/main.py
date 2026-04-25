@@ -115,7 +115,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="poi-brain",
-    description="Person of Interest — predictive intelligence brain",
+    description="Auto Safety — predictive intelligence brain",
     version="0.1.0",
     lifespan=lifespan,
 )

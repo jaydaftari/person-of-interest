@@ -24,7 +24,7 @@ const defaultUrl = process.env.VERCEL_URL
 
 export const metadata = {
   metadataBase: new URL(defaultUrl),
-  title: "Person of Interest // DECK/01",
+  title: "Auto Safety // DECK/01",
   description: "Local on-device surveillance intelligence. Tactical HUD for live city feeds.",
 };
 

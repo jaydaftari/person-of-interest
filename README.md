@@ -1,4 +1,4 @@
-# Person of Interest — DECK/01
+# Auto Safety — DECK/01
 
 A local-inference tactical HUD for live NYC infrastructure.
 

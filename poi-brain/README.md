@@ -1,6 +1,6 @@
 # poi-brain
 
-Person of Interest — predictive intelligence brain.
+Auto Safety — predictive intelligence brain.
 
 FastAPI service that runs on the **Acer Veriton GN100 DGX Spark**. Fuses NYC
 Open Data through a RAPIDS pipeline, trains a cuML XGBoost risk forecaster,
