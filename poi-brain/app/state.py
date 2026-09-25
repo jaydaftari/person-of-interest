@@ -20,6 +20,11 @@ class FrameMemory:
     latest_thumb_b64: Optional[str] = None
     latest_events: list = field(default_factory=list)
     last_updated: float = 0.0
+    last_snapshot_at: Optional[str] = None
+    last_analyzed_at: Optional[str] = None
+    last_attempt_at: Optional[str] = None
+    analysis_status: str = "never"
+    analysis_error: Optional[str] = None
 
 
 @dataclass

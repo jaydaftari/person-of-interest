@@ -5,6 +5,7 @@ description = "Person of Interest — predictive intelligence brain (RAPIDS + NI
 requires-python = ">=3.10"
 
 dependencies = [
+    "mcp==1.30.0",
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.32.0",
     "pydantic>=2.9.0",

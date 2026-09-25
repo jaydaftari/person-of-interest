@@ -11,6 +11,7 @@ import ChatInterface from "@/components/chat-interface"
 import { Timeline } from "../../components/Timeline"
 import type { Timestamp } from "@/app/types"
 import { detectEvents, type VideoEvent } from "./actions"
+import { createSpeechTranscriber } from "@/lib/realtime-speech"
 
 // Dynamically import TensorFlow.js and models
 import type * as blazeface from '@tensorflow-models/blazeface'
@@ -55,6 +56,9 @@ export default function Page() {
   const [initializationProgress, setInitializationProgress] = useState<string>('')
   const [transcript, setTranscript] = useState('')
   const [isTranscribing, setIsTranscribing] = useState(false)
+  const [interimTranscript, setInterimTranscript] = useState('')
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null)
+  const [analysisError, setAnalysisError] = useState<string | null>(null)
   const [videoName, setVideoName] = useState('')
   const [recordedVideoUrl, setRecordedVideoUrl] = useState<string | null>(null)
   const [mlModelsReady, setMlModelsReady] = useState(false)
@@ -72,7 +76,10 @@ export default function Page() {
   const startTimeRef = useRef<Date | null>(null)
   const faceModelRef = useRef<blazeface.BlazeFaceModel | null>(null)
   const poseModelRef = useRef<posedetection.PoseDetector | null>(null)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<ReturnType<typeof createSpeechTranscriber> | null>(null)
+  const transcriptRef = useRef('')
+  const analysisInFlightRef = useRef(false)
+  const recordingSessionRef = useRef(0)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const recordedChunksRef = useRef<Blob[]>([])
   const isRecordingRef = useRef<boolean>(false)
@@ -241,27 +248,19 @@ export default function Page() {
   // -----------------------------
   const initSpeechRecognition = () => {
     if (typeof window === "undefined") return
-    if ("webkitSpeechRecognition" in window) {
-      const SpeechRecognition = window.webkitSpeechRecognition
-      const recognition = new SpeechRecognition()
-      recognition.continuous = true
-      recognition.interimResults = true
-
-      recognition.onresult = (event: SpeechRecognitionEvent) => {
-        let finalTranscript = ""
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalTranscript += event.results[i][0].transcript
-          }
-        }
-        if (finalTranscript) {
-          setTranscript((prev) => prev + " " + finalTranscript)
-        }
-      }
-
-      recognitionRef.current = recognition
+    const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition
+    if (Recognition) {
+      recognitionRef.current = createSpeechTranscriber(Recognition, {
+        onTranscript: (finalText, interimText) => {
+          transcriptRef.current = finalText
+          setTranscript(finalText)
+          setInterimTranscript(interimText)
+        },
+        onActive: setIsTranscribing,
+        onError: setTranscriptionError,
+      }, navigator.language || "en-US")
     } else {
-      console.warn("Speech recognition not supported in this browser.")
+      setTranscriptionError("Live transcription is not supported in this browser.")
     }
   }
 
@@ -417,10 +416,11 @@ export default function Page() {
   // 5) Analyze frame via API (and send email if dangerous)
   // -----------------------------
   const analyzeFrame = async () => {
-    if (!isRecordingRef.current) return
-
-    const currentTranscript = transcript.trim()
-    const currentPoseKeypoints = [...lastPoseKeypoints]
+    if (!isRecordingRef.current || analysisInFlightRef.current) return
+    analysisInFlightRef.current = true
+    const session = recordingSessionRef.current
+    const frameTimestamp = getElapsedTime()
+    const currentTranscript = transcriptRef.current.trim().slice(-2000)
 
     try {
       const frame = await captureFrame()
@@ -432,12 +432,14 @@ export default function Page() {
       }
 
       const result = await detectEvents(frame, currentTranscript)
-      if (!isRecordingRef.current) return
+      if (!isRecordingRef.current || session !== recordingSessionRef.current) return
+      setAnalysisError(result.error ?? null)
+      if (result.error) return
 
       if (result.events && result.events.length > 0) {
         result.events.forEach(async (event: VideoEvent) => {
           const newTimestamp = {
-            timestamp: getElapsedTime(),
+            timestamp: frameTimestamp,
             description: event.description,
             isDangerous: event.isDangerous
           }
@@ -490,10 +492,11 @@ export default function Page() {
       }
     } catch (error) {
       console.error("Error analyzing frame:", error)
-      setError("Error analyzing frame. Please try again.")
-      if (isRecordingRef.current) {
-        stopRecording()
+      if (isRecordingRef.current && session === recordingSessionRef.current) {
+        setAnalysisError("Frame analysis failed or returned unreliable text. This frame was skipped; the next frame will be tried automatically.")
       }
+    } finally {
+      analysisInFlightRef.current = false
     }
   }
 
@@ -551,10 +554,38 @@ export default function Page() {
     if (!mediaStreamRef.current) return
 
     setError(null)
+    setAnalysisError(null)
     setTimestamps([])
     setAnalysisProgress(0)
+    transcriptRef.current = ""
+    setTranscript("")
+    setInterimTranscript("")
+
+    let mediaRecorder: MediaRecorder
+    try {
+      const mimeType = ["video/mp4", "video/webm;codecs=vp8,opus", "video/webm"]
+        .find(type => MediaRecorder.isTypeSupported(type))
+      mediaRecorder = new MediaRecorder(mediaStreamRef.current, mimeType ? { mimeType } : undefined)
+      recordedChunksRef.current = []
+      const chunks = recordedChunksRef.current
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) chunks.push(event.data)
+      }
+      mediaRecorder.onstop = () => {
+        const type = mediaRecorder.mimeType || chunks[0]?.type || "video/webm"
+        const blob = new Blob(chunks, { type })
+        setRecordedVideoUrl(URL.createObjectURL(blob))
+        setVideoName(type.includes("mp4") ? "stream.mp4" : "stream.webm")
+      }
+      mediaRecorder.start(1000)
+      mediaRecorderRef.current = mediaRecorder
+    } catch {
+      setError("Video recording could not start. Check camera and microphone access and browser recording support.")
+      return
+    }
 
     startTimeRef.current = new Date()
+    recordingSessionRef.current += 1
     isRecordingRef.current = true
     setIsRecording(true)
     stopPreviewLoop()
@@ -571,47 +602,8 @@ export default function Page() {
 
     // Start speech recognition
     if (recognitionRef.current) {
-      setTranscript("")
-      setIsTranscribing(true)
       recognitionRef.current.start()
     }
-
-    // Start video recording using MediaRecorder with MP4 container
-    recordedChunksRef.current = []
-    const mediaRecorder = new MediaRecorder(mediaStreamRef.current, {
-      mimeType: "video/mp4"
-    })
-
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data.size > 0) {
-        recordedChunksRef.current.push(event.data)
-      }
-    }
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(recordedChunksRef.current, { type: "video/mp4" })
-      const url = URL.createObjectURL(blob)
-      setRecordedVideoUrl(url)
-      setVideoName("stream.mp4")
-    }
-
-    // Set up data handling before starting
-    mediaRecorder.ondataavailable = (event) => {
-      if (event.data && event.data.size > 0) {
-        recordedChunksRef.current.push(event.data)
-      }
-    }
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(recordedChunksRef.current, { type: "video/mp4" })
-      const url = URL.createObjectURL(blob)
-      setRecordedVideoUrl(url)
-      setVideoName("stream.mp4")
-    }
-
-    mediaRecorderRef.current = mediaRecorder
-    // Start recording with a timeslice of 1000ms (1 second)
-    mediaRecorder.start(1000)
 
     // Start the TensorFlow detection loop
     if (detectionFrameRef.current) {
@@ -630,6 +622,7 @@ export default function Page() {
 
   const stopRecording = () => {
     startTimeRef.current = null
+    recordingSessionRef.current += 1
     isRecordingRef.current = false
     setIsRecording(false)
 
@@ -731,6 +724,14 @@ export default function Page() {
     init()
 
     return () => {
+      isRecordingRef.current = false
+      recordingSessionRef.current += 1
+      recognitionRef.current?.stop()
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+        mediaRecorderRef.current.onstop = null
+        mediaRecorderRef.current.stop()
+      }
+      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current)
       stopWebcam()
       if (analysisIntervalRef.current) clearInterval(analysisIntervalRef.current)
       if (detectionFrameRef.current) cancelAnimationFrame(detectionFrameRef.current)
@@ -858,6 +859,7 @@ export default function Page() {
                     </p>
                   )}
                 </div>
+                {analysisError && <p role="status" className="text-sm text-amber-400">{analysisError}</p>}
                 <TimestampList
                   timestamps={timestamps}
                   onTimestampClick={() => {}}
@@ -870,6 +872,7 @@ export default function Page() {
                   Audio Transcript
                 </h2>
                 <div className="p-4 bg-zinc-900/50 rounded-lg">
+                  {transcriptionError && <p role="status" className="text-sm text-amber-400 mb-2">{transcriptionError}</p>}
                   {isTranscribing && (
                     <div className="flex items-center gap-2 mb-2">
                       <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -878,14 +881,17 @@ export default function Page() {
                       </span>
                     </div>
                   )}
-                  {transcript ? (
+                  {transcript || interimTranscript ? (
                     <p className="text-zinc-300 whitespace-pre-wrap">
                       {transcript}
+                      {interimTranscript && <span className="text-zinc-500"> {interimTranscript}</span>}
                     </p>
                   ) : (
                     <p className="text-zinc-500 italic">
-                      {isRecording
-                        ? "Waiting for speech..."
+                      {transcriptionError
+                        ? "Live transcription unavailable"
+                        : isRecording
+                        ? isTranscribing ? "Waiting for speech..." : "Connecting to speech recognition..."
                         : "Start recording to capture audio"}
                     </p>
                   )}

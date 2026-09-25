@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     log_level: str = "info"
     cors_allow_origins: List[str] = ["*"]
 
+    # Public geographic services (cached and rate-limited).
+    osrm_base_url: str = "https://routing.openstreetmap.de/routed-car"
+    nominatim_base_url: str = "https://nominatim.openstreetmap.org"
+    mcp_internal_url: str = "http://127.0.0.1:8080/mcp/"
+    assistant_model: Optional[str] = None
+
     # VLM (LM Studio)
     lmstudio_base_url: str = "http://192.168.3.37:1234/v1"
     lmstudio_model: str = "google/gemma-4-26b-a4b"
@@ -56,6 +62,7 @@ class Settings(BaseSettings):
     # Camera ingestion
     webcams_base: str = "https://webcams.nyctmc.org"
     camera_poll_interval_s: float = 3.0
+    camera_background_polling_enabled: bool = True
     camera_subset_size: int = 400
     camera_manual_subset: List[str] = []
     camera_boroughs: List[str] = ["Manhattan"]

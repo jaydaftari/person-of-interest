@@ -2,6 +2,7 @@
 
 import { getVlmClient } from "@/lib/vlm";
 import type { FrameEvent, RiskContext } from "@/lib/vlm/shared";
+import { validateFrameEvents } from "@/lib/vlm/shared";
 
 export type VideoEvent = FrameEvent;
 
@@ -10,17 +11,22 @@ export async function detectEvents(
   transcript: string = "",
   cameraId?: string,
   riskContext?: RiskContext
-): Promise<{ events: VideoEvent[]; rawResponse: string; riskScoreAtTime?: number }> {
+): Promise<{ events: VideoEvent[]; rawResponse: string; riskScoreAtTime?: number; error?: string }> {
   console.log("Starting frame analysis (realtime stream)...");
   try {
-    return await getVlmClient().analyzeFrame({
+    const result = await getVlmClient().analyzeFrame({
       base64Image,
       transcript,
       cameraId,
       riskContext,
     });
+    return { ...result, events: validateFrameEvents(result.events) };
   } catch (error) {
-    console.error("Error in detectEvents:", error);
-    throw error;
+    console.warn("Frame analysis skipped:", error);
+    return {
+      events: [],
+      rawResponse: "",
+      error: "Frame analysis failed or returned unreliable text. This frame was skipped; the next frame will be tried automatically.",
+    };
   }
 }

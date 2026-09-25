@@ -67,7 +67,7 @@ export default function RootLayout({
           forcedTheme="dark"
           disableTransitionOnChange
         >
-          <div className="relative z-10 flex min-h-screen flex-col">
+          <div className="deck-shell relative z-10 flex min-h-screen flex-col">
             {/* Top status strip */}
             <div className="border-b border-deck-line bg-deck-bg/80">
               <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-2">
@@ -99,7 +99,7 @@ export default function RootLayout({
             </header>
 
             {/* Content slot */}
-            <main className="relative flex-1">{children}</main>
+            <main className="deck-main relative flex-1">{children}</main>
 
             {/* Footer strip */}
             <footer className="border-t border-deck-line bg-deck-bg/60">

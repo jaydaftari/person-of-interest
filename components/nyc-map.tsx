@@ -7,7 +7,7 @@ import type { NyctmcCamera } from "@/lib/nyctmc";
 import "leaflet/dist/leaflet.css";
 
 /**
- * DECK/01 tactical NYC map. Dark Carto tiles + amber DivIcon markers.
+ * DECK/01 tactical NYC map. OpenStreetMap tiles + amber DivIcon markers.
  * Renders a marker for every camera with valid coordinates and fires
  * `onSelect` when the operator clicks one.
  */
@@ -83,10 +83,10 @@ export default function NycMap({ cameras, selectedId, onSelect }: NycMapProps) {
         style={{ background: "rgb(8 8 10)" }}
       >
         <TileLayer
-          // Carto Dark Matter — no API key, matches DECK aesthetic.
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          subdomains={["a", "b", "c", "d"]}
+          // Public OSM tiles use normal browser caching and require no API key.
+          url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          className="deck-osm-tiles"
           maxZoom={19}
         />
         {locatable.map((camera) => {

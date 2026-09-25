@@ -17,6 +17,8 @@ const LMSTUDIO_MODEL =
 const lmstudio = new OpenAI({
   baseURL: LMSTUDIO_BASE_URL,
   apiKey: process.env.LMSTUDIO_API_KEY ?? "lm-studio",
+  timeout: 60_000,
+  maxRetries: 0,
 });
 
 async function analyzeFrame(
@@ -70,6 +72,9 @@ async function analyzeFrame(
   }
 
   const choice = completion.choices?.[0];
+  if (choice?.finish_reason === "length") {
+    throw new Error("Frame analysis reached its output limit. This frame was skipped.");
+  }
   const text = choice?.message?.content ?? "";
   if (!text) return { events: [], rawResponse: "" };
 

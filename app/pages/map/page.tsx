@@ -41,11 +41,12 @@ export default function MapPage() {
     const u = () =>
       setClock(
         new Date().toLocaleTimeString("en-US", {
+          timeZone: "UTC",
           hour12: false,
           hour: "2-digit",
           minute: "2-digit",
           second: "2-digit",
-        })
+        }),
       );
     u();
     const i = setInterval(u, 1000);
@@ -88,9 +89,9 @@ export default function MapPage() {
           c.latitude != null &&
           c.longitude != null &&
           Number.isFinite(c.latitude) &&
-          Number.isFinite(c.longitude)
+          Number.isFinite(c.longitude),
       ),
-    [cameras]
+    [cameras],
   );
 
   const imageUrl = selected
@@ -127,21 +128,20 @@ export default function MapPage() {
   const hasHazard = analysis?.events?.some((e) => e.isDangerous);
 
   return (
-    <div className="relative mx-auto max-w-[1600px] px-6 py-6">
+    <div className="deck-workspace nyc-map-page relative mx-auto w-full max-w-[1600px] px-4 py-3">
       {/* Page header */}
-      <div className="mb-4 flex items-end justify-between">
+      <div className="mb-3 flex shrink-0 items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.14em] text-deck-dim">
             <span className="h-px w-8 bg-deck-signal" />
             <span className="text-deck-signal">/pages/map — deck/01</span>
           </div>
-          <h1 className="mt-3 text-4xl font-extrabold uppercase tracking-tight text-deck-fg">
+          <h1 className="mt-1 text-xl xl:text-2xl font-extrabold uppercase tracking-tight text-deck-fg">
             GRID MAP <span className="text-deck-signal">·</span> NYC
           </h1>
-          <p className="mt-2 max-w-[60ch] text-[13px] font-medium text-deck-dim">
-            Tactical overview of every NYC TMC camera with a known
-            position. Click any marker to pull its live feed and run
-            on-device inference.
+          <p className="mt-1 max-w-[80ch] text-[11px] font-medium text-deck-dim">
+            NYC traffic cameras · select a marker to view its feed and analyze a
+            snapshot.
           </p>
         </div>
         <div className="hidden flex-col items-end gap-1.5 text-right text-[11px] font-bold uppercase tracking-[0.14em] text-deck-dim md:flex">
@@ -160,9 +160,9 @@ export default function MapPage() {
       </div>
 
       {/* Main grid */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="nyc-map-grid grid min-h-0 gap-3 lg:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_350px]">
         {/* ----- MAP ----- */}
-        <div className="deck-panel relative h-[70vh] overflow-hidden">
+        <div className="nyc-map-canvas deck-panel relative h-[55vh] min-h-0 min-w-0 overflow-hidden">
           <div className="absolute left-3 top-3 z-[500] flex items-center gap-2 bg-deck-bg/85 px-2.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-deck-signal">
             <span className="deck-dot deck-blink" />
             {isLoading ? "LOADING…" : `${locatable.length} NODES ON MAP`}
@@ -180,10 +180,10 @@ export default function MapPage() {
         </div>
 
         {/* ----- SIDE PANEL: live feed + analysis ----- */}
-        <aside className="deck-panel flex max-h-[70vh] flex-col overflow-hidden">
+        <aside className="nyc-map-sidebar deck-panel flex min-h-0 min-w-0 flex-col overflow-hidden">
           {selected ? (
             <>
-              <div className="border-b border-deck-line p-4">
+              <div className="shrink-0 border-b border-deck-line p-3">
                 <div className="deck-label-hi">ACTIVE FEED</div>
                 <div className="mt-1.5 text-base font-extrabold uppercase text-deck-fg">
                   {selected.name}
@@ -200,10 +200,10 @@ export default function MapPage() {
               </div>
 
               {/* Video container */}
-              <div className="relative deck-scanlines border-b border-deck-line bg-deck-bg">
+              <div className="nyc-map-preview relative shrink-0 deck-scanlines border-b border-deck-line bg-deck-bg">
                 <div className="absolute left-2 top-2 z-10 flex items-center gap-2 bg-deck-bg/80 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-deck-signal">
                   <span className="deck-dot deck-blink" />
-                  LIVE · CAM {selected.id}
+                  LIVE · NYC DOT
                 </div>
                 <div className="absolute right-2 top-2 z-10 deck-num text-[11px] font-bold text-deck-fg bg-deck-bg/80 px-2 py-1">
                   {clock}
@@ -214,7 +214,7 @@ export default function MapPage() {
                     key={imageSeed}
                     src={imageUrl}
                     alt={selected.name}
-                    className="block w-full object-cover"
+                    className="block w-full object-contain"
                     loading="lazy"
                   />
                 ) : (
@@ -225,7 +225,7 @@ export default function MapPage() {
               </div>
 
               {/* Controls */}
-              <div className="border-b border-deck-line p-4">
+              <div className="shrink-0 border-b border-deck-line p-3">
                 <button
                   type="button"
                   onClick={handleAnalyze}
@@ -242,7 +242,7 @@ export default function MapPage() {
               </div>
 
               {/* Detection stream */}
-              <div className="flex-1 overflow-y-auto">
+              <div className="nyc-map-results min-h-0 flex-1 overflow-y-auto">
                 <div className="flex items-center justify-between border-b border-deck-line px-4 py-3">
                   <div className="deck-label-hi">DETECTION STREAM</div>
                   <div
@@ -250,8 +250,8 @@ export default function MapPage() {
                       hasHazard
                         ? "text-deck-alert"
                         : analysis
-                        ? "text-deck-ok"
-                        : "text-deck-dim"
+                          ? "text-deck-ok"
+                          : "text-deck-dim"
                     }`}
                   >
                     <span className="deck-dot" />
@@ -303,7 +303,7 @@ export default function MapPage() {
               </div>
             </>
           ) : (
-            <div className="flex h-full flex-col items-center justify-center gap-2 p-10 text-center">
+            <div className="flex h-full min-h-[160px] flex-col items-center justify-center gap-2 p-6 text-center">
               <div className="deck-label-hi">NO NODE SELECTED</div>
               <div className="text-[12px] font-bold text-deck-dim">
                 › click any marker on the map to pull its live feed

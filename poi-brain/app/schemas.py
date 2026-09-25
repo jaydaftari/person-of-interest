@@ -23,6 +23,11 @@ class Camera(BaseModel):
     borough: Optional[str] = None
     modelCoverage: ModelCoverage = "full"
     online: bool = True
+    lastSnapshotAt: Optional[str] = None
+    lastAnalyzedAt: Optional[str] = None
+    lastAttemptAt: Optional[str] = None
+    analysisStatus: Literal["never", "analyzing", "fresh", "stale", "failed", "offline"] = "never"
+    analysisError: Optional[str] = None
 
 
 class RiskScore(BaseModel):
@@ -84,14 +89,18 @@ class ForecastStats(BaseModel):
 
 class PatrolWaypoint(BaseModel):
     latLng: Tuple[float, float]
-    etaSeconds: float
+    etaSeconds: Optional[float]
+    name: Optional[str] = None
+    h3Cell: Optional[str] = None
+    riskScore: Optional[float] = None
+    reasons: List[str] = []
     cameraId: Optional[str] = None
 
 
 class PatrolRouteSolverMeta(BaseModel):
     solveMs: float
     objective: float
-    solverBackend: Literal["cuopt", "greedy"]
+    solverBackend: Literal["cuopt", "greedy", "selected-order"]
 
 
 class PatrolRoute(BaseModel):
@@ -99,6 +108,14 @@ class PatrolRoute(BaseModel):
     waypoints: List[PatrolWaypoint]
     totalRiskCovered: float
     solverMetadata: PatrolRouteSolverMeta
+    geometry: List[List[float]] = []  # GeoJSON longitude, latitude
+    distanceMeters: Optional[float] = None
+    durationSeconds: Optional[float] = None
+    status: Literal["ready", "unavailable", "pending"] = "pending"
+    error: Optional[str] = None
+    generatedAt: Optional[str] = None
+    routingSource: str = "OSRM · OpenStreetMap"
+    liveTraffic: bool = False
 
 
 class RetrievedIncident(BaseModel):

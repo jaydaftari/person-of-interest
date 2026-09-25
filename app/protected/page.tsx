@@ -183,7 +183,7 @@ export default function MissionControlPage() {
       </aside>
 
 
-      <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-4 p-4">
+      <footer className="pointer-events-none absolute inset-x-0 bottom-0 z-10 hidden items-end justify-between gap-4 p-4">
         <div className="pointer-events-auto rounded-md border border-white/10 bg-black/70 px-3 py-2 backdrop-blur-md">
           <div className="text-[9px] uppercase tracking-[0.18em] text-white/50">
             NVIDIA Stack

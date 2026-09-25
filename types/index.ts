@@ -36,6 +36,11 @@ export interface Camera {
   borough?: string;
   modelCoverage?: ModelCoverage;
   online?: boolean;
+  lastSnapshotAt?: string | null;
+  lastAnalyzedAt?: string | null;
+  lastAttemptAt?: string | null;
+  analysisStatus?: "never" | "analyzing" | "fresh" | "stale" | "failed" | "offline";
+  analysisError?: string | null;
 }
 
 export interface Location {
@@ -136,7 +141,11 @@ export interface ForecastStats {
 
 export interface PatrolWaypoint {
   latLng: [number, number];
-  etaSeconds: number;
+  etaSeconds: number | null;
+  name?: string;
+  h3Cell?: string;
+  riskScore?: number;
+  reasons?: string[];
   cameraId?: string;
 }
 
@@ -144,9 +153,17 @@ export interface PatrolRoute {
   unitId: string;
   waypoints: PatrolWaypoint[];
   totalRiskCovered: number;
+  geometry?: [number, number][];
+  distanceMeters?: number | null;
+  durationSeconds?: number | null;
+  status?: "ready" | "unavailable" | "pending";
+  error?: string | null;
+  generatedAt?: string;
+  routingSource?: string;
+  liveTraffic?: boolean;
   solverMetadata: {
     solveMs: number;
     objective: number;
-    solverBackend: "cuopt" | "greedy";
+    solverBackend: "cuopt" | "greedy" | "selected-order";
   };
 }

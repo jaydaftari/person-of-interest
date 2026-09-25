@@ -27,7 +27,9 @@ from .pipeline.rapids_runtime import HAS_RAPIDS
 from .pipeline.retrieval import get_index
 from .pipeline.risk_engine import recompute_once, run_risk_engine_forever
 from .pipeline.train_cuml import load_model, train_risk_model
-from .routers import cameras, dispatch, frames, health, risk, stats
+from .routers import cameras, dispatch, frames, health, risk, stats, assistant, operations
+from .mcp_server import mcp
+from .pipeline.monitoring import MONITOR
 from .state import STATE
 from .vlm import get_vlm_client
 
@@ -92,8 +94,9 @@ async def _startup() -> None:
 async def _spawn_background_tasks(app: FastAPI) -> list[asyncio.Task]:
     tasks = [
         asyncio.create_task(run_risk_engine_forever(interval_s=60.0)),
-        asyncio.create_task(run_poller_forever()),
     ]
+    if settings.camera_background_polling_enabled:
+        tasks.append(asyncio.create_task(run_poller_forever()))
     return tasks
 
 
@@ -102,8 +105,10 @@ async def lifespan(app: FastAPI):
     await _startup()
     tasks = await _spawn_background_tasks(app)
     try:
-        yield
+        async with mcp.session_manager.run():
+            yield
     finally:
+        await MONITOR.stop()
         for t in tasks:
             t.cancel()
         for t in tasks:
@@ -136,6 +141,9 @@ app.include_router(risk.router)
 app.include_router(stats.router)
 app.include_router(frames.router)
 app.include_router(dispatch.router)
+app.include_router(assistant.router)
+app.include_router(operations.router)
+app.mount("/mcp", mcp.streamable_http_app())
 
 
 @app.get("/")

@@ -46,9 +46,6 @@ export default function Home() {
             <Link href="/pages/nyctmc" className="deck-btn deck-btn--primary">
               ▶ ENTER DECK
             </Link>
-            <Link href="/protected" className="deck-btn">
-              // DASHBOARD
-            </Link>
           </div>
 
           <div className="mt-16 grid max-w-xl grid-cols-3 gap-6">

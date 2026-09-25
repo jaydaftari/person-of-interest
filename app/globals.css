@@ -342,6 +342,52 @@
 .bg-radial-gradient { background: transparent; }
 .animate-blink { animation: deck-blink 1.4s steps(2, jump-none) infinite; }
 
+/* Camera workspace: keep the feed, composer and results visible together. */
+.nyctmc-page .nyctmc-page-button {
+  padding: 6px 8px;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+.nyctmc-video {
+  min-height: 180px;
+  aspect-ratio: 16 / 9;
+}
+.nyctmc-catalog { max-height: 440px; }
+.nyctmc-events { max-height: 440px; }
+.nyc-map-results { max-height: 400px; }
+
+@media (min-width: 1024px) {
+  .deck-shell:has(.deck-workspace) {
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+  .deck-shell:has(.deck-workspace) > :not(main) { flex-shrink: 0; }
+  .deck-main:has(.deck-workspace) {
+    display: flex;
+    min-height: 0;
+  }
+  .deck-workspace {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+  }
+  .nyctmc-grid, .nyc-map-grid { flex: 1; min-height: 0; }
+  .nyc-map-canvas { height: 100%; }
+  .nyc-map-preview img { max-height: clamp(100px, 23dvh, 220px); }
+  .nyc-map-sidebar .deck-btn { padding: 8px 10px; font-size: 11px; }
+  .nyctmc-video { flex: 1; min-height: 0; aspect-ratio: auto; }
+  .nyctmc-catalog, .nyctmc-events, .nyc-map-results { max-height: none; }
+  .nyctmc-page .deck-btn { padding: 8px 10px; font-size: 11px; }
+  .nyctmc-page .nyctmc-page-button { padding: 6px 8px; font-size: 10px; }
+  .nyctmc-page .deck-input { padding: 8px 10px; font-size: 12px; }
+  .deck-shell:has(.deck-workspace) > header > div { padding: 10px 16px; gap: 12px; }
+  .deck-shell:has(.deck-workspace) > header > div > div:first-child { min-width: 0; gap: 16px; }
+  .deck-shell:has(.deck-workspace) > header nav { min-width: 0; overflow-x: auto; }
+  .deck-shell:has(.deck-workspace) > header nav a { flex-shrink: 0; padding-inline: 8px; }
+}
+
 /* --------------------------------------------------------------------
  * Leaflet overrides — match the DECK aesthetic
  * ------------------------------------------------------------------ */
@@ -375,4 +421,9 @@
 .deck-map-marker {
   background: transparent !important;
   border: none !important;
+}
+
+/* Darken only the basemap; camera markers and attribution retain their colors. */
+.deck-osm-tiles {
+  filter: invert(1) hue-rotate(180deg) saturate(0.25) brightness(0.75) contrast(1.15);
 }
